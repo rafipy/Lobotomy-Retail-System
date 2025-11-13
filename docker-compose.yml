@@ -1,0 +1,36 @@
+services:
+  db:
+    image: mysql:8.0.29
+    container_name: retail_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: retail
+      MYSQL_USER: retail_user
+      MYSQL_PASSWORD: retail_password
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # Backend, waits for db to be healthy before starting (where the actual things go through)
+  backend:
+    build: ./backend
+    container_name: retail_backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: mysql+pymysql://retail_user:retail_password@db:3306/retail
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend/app:/app/app
+
+volumes:
+  mysql_data:
