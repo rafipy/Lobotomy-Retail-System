@@ -88,7 +88,7 @@ export function RegisterForm() {
     <div className="w-full max-w-md animate-fade-in">
       <form onSubmit={handleSubmit}>
         <FieldGroup>
-          <FieldSet className="border-4 border-yellow-200 rounded-xl px-8 pb-8 bg-black/30 backdrop-blur-sm">
+          <FieldSet className="min-w-[60vh] border-4 border-yellow-200 rounded-xl px-8 pb-8 bg-black/30 backdrop-blur-sm">
             <FieldLegend className="font-heading text-yellow-200 text-4xl px-2 flex gap-2">
               <Button
                 variant="ghost"
