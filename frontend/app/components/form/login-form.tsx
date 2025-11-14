@@ -1,0 +1,114 @@
+"use client";
+
+import { Button } from "@/components/ui/button";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { ArrowLeft } from "lucide-react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+const DUMMY_USERS = [
+  { username: "admin", password: "password123" },
+  { username: "customer1", password: "test1234" },
+  { username: "demo", password: "demo1234" },
+];
+
+export function LoginForm() {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const router = useRouter();
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const user = DUMMY_USERS.find(
+      (u) => u.username === username && u.password === password,
+    );
+
+    if (user) {
+      console.log("Login successful:", username);
+      router.push("/dashboard");
+    } else {
+      alert("Invalid username or password");
+    }
+  };
+
+  const handleBack = () => {
+    window.history.back();
+  };
+
+  return (
+    <div className="w-full max-w-md animate-fade-in">
+      <form onSubmit={handleSubmit}>
+        <FieldGroup>
+          <FieldSet className="border-4 border-yellow-200 rounded-xl pb-8 pt-4 px-8 bg-black/30 backdrop-blur-sm">
+            <FieldLegend className="font-heading text-yellow-200 text-4xl px-2 flex gap-2">
+              <Button
+                variant="ghost"
+                type="button"
+                onClick={handleBack}
+                className="text-yellow-200 hover:bg-red-600  bg-black border-2 border-red-500"
+              >
+                <ArrowLeft className="h-6 w-6" />
+              </Button>
+
+              <span className="mt-1.5 pl-0.5">Login</span>
+            </FieldLegend>
+
+            <FieldDescription className="font-body text-white text-lg">
+              Welcome back to Lobotomy Retail, customer. Please enter your
+              credentials to continue shopping.
+            </FieldDescription>
+
+            <FieldGroup className="animate-fade-in-delay-200 space-y-4">
+              <Field>
+                <FieldLabel className="text-white font-semibold">
+                  Username
+                </FieldLabel>
+                <Input
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Enter your username"
+                  required
+                  className="bg-black/50 text-white border-2 border-teal-500 focus:border-yellow-200"
+                />
+              </Field>
+
+              <Field>
+                <FieldLabel className="text-white font-semibold">
+                  Password
+                </FieldLabel>
+                <Input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  required
+                  className="bg-black/50 text-white border-2 border-teal-500 focus:border-yellow-200"
+                />
+              </Field>
+            </FieldGroup>
+            <Field
+              orientation="horizontal"
+              className="mt-6 gap-4 animate-fade-in-delay-400"
+            >
+              <Button
+                type="submit"
+                className="bg-yellow-200 text-black hover:bg-yellow-300 font-bold text-lg px-8 py-6 w-full"
+              >
+                Login
+              </Button>
+            </Field>
+          </FieldSet>
+        </FieldGroup>
+      </form>
+    </div>
+  );
+}
