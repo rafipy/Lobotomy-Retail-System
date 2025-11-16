@@ -87,6 +87,88 @@
     animation: fade-in 0.6s ease-out 0.2s forwards;
 }
 
+@keyframes admin-flicker {
+    0% {
+        opacity: 0;
+    }
+    3% {
+        opacity: 0;
+    }
+    5% {
+        opacity: 0;
+    }
+    8% {
+        opacity: 0.05;
+    }
+    12% {
+        opacity: 0;
+    }
+    15% {
+        opacity: 0.08;
+    }
+    18% {
+        opacity: 0.02;
+    }
+    22% {
+        opacity: 0;
+    }
+    25% {
+        opacity: 0.1;
+    }
+    30% {
+        opacity: 0.04;
+    }
+    35% {
+        opacity: 0;
+    }
+    40% {
+        opacity: 0.07;
+    }
+    45% {
+        opacity: 0.03;
+    }
+    50% {
+        opacity: 0;
+    }
+    55% {
+        opacity: 0.09;
+    }
+    60% {
+        opacity: 0;
+    }
+    63% {
+        opacity: 0.06;
+    }
+    68% {
+        opacity: 0.01;
+    }
+    72% {
+        opacity: 0;
+    }
+    75% {
+        opacity: 0.1;
+    }
+    80% {
+        opacity: 0.05;
+    }
+    85% {
+        opacity: 0;
+    }
+    90% {
+        opacity: 0.08;
+    }
+    95% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 0.02;
+    }
+}
+
+.animate-flicker {
+    animation: admin-flicker 12s infinite ease-in-out;
+}
+
 /* Select dropdown text color fix */
 [data-radix-select-viewport] {
     color: black;

@@ -1,14 +1,16 @@
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import Base, engine
+from app.routers import admin, auth
+
+load_dotenv()
 
 app = FastAPI(title="Retail DBMS API")
 
-# create tables
 Base.metadata.create_all(bind=engine)
 
-# middleware for Next.js frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
@@ -17,7 +19,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router)
+app.include_router(admin.router)
+
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to the Retail DBMS API!"}
+    return {"message": "Retail DBMS API is running"}

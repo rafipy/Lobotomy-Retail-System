@@ -5,8 +5,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "mysql+pymysql://retail_user:retail_password@localhost:3306/retail",
+    "DATABASE_URL", "mysql+pymysql://retail_user:retail_password@db:3306/retail"
 )
 
 engine = create_engine(DATABASE_URL)

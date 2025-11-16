@@ -1,1 +1,3 @@
-*.env.example
+.env
+backend/.env
+backend/create_admin.py
