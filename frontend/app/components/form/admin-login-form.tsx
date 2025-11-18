@@ -10,7 +10,7 @@ import {
   FieldSet,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -90,7 +90,7 @@ export function AdminLoginForm() {
               Please enter your credentials.
             </FieldDescription>
 
-            <FieldGroup className="animate-fade-in-delay-200 space-y-4 ">
+            <FieldGroup className="animate-fade-in-delay-200 space-y-4  pb-2 -mt-2">
               <Field>
                 <FieldLabel className="text-white font-semibold">
                   Username
@@ -119,25 +119,29 @@ export function AdminLoginForm() {
                   className="bg-black/50 text-white border-2 border-teal-500 focus:border-yellow-200"
                 />
               </Field>
-              <FieldDescription className="text-center font-body text-red-700 text-shadow-red text-shadow-red-900 text-shadow-xs text-[0.5vw] font-extralight">
-                EMPLOYEE REMINDER: She is not there. Do <b>not</b> listen to the
-                voices. Do <b>not</b> listen to her.
+              <FieldDescription className="text-left font-body flex flex-row text-red-700 text-shadow-red text-shadow-red-900 text-shadow-xs text-[0.8vw] font-extralight">
+                <AlertCircle size={32} />
+                <span className="-mt-3 ml-2">
+                  EMPLOYEE REMINDER: <br />
+                  She is not there. Do <b>not</b> listen to the voices. Do{" "}
+                  <b>not</b> listen to her. If you do hear her, evacuate ASAP
+                  for the safety and comfort of all around you.
+                </span>
               </FieldDescription>
             </FieldGroup>
-          </FieldSet>
-
-          <Field
-            orientation="horizontal"
-            className="mt-6 gap-4 animate-fade-in-delay-400"
-          >
-            <Button
-              type="submit"
-              disabled={loading}
-              className="bg-red-700 text-white hover:bg-red-900 font-bold text-lg px-8 py-6 w-full"
+            <Field
+              orientation="horizontal"
+              className="mt-6 gap-4 animate-fade-in-delay-400"
             >
-              {loading ? "Logging in..." : "Login"}
-            </Button>
-          </Field>
+              <Button
+                type="submit"
+                disabled={loading}
+                className="bg-red-700 text-white hover:bg-red-900 font-bold text-lg px-8 py-6 -mt-6 w-full"
+              >
+                {loading ? "Logging in..." : "Login"}
+              </Button>
+            </Field>
+          </FieldSet>
         </FieldGroup>
       </form>
     </div>

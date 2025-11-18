@@ -11,7 +11,7 @@ export function AdminLoginSection() {
         className="object-cover animate-flicker"
         priority
         quality={90}
-        style={{ opacity: 0 }}
+        style={{ opacity: 1 }}
       />
       <AdminLoginForm />
     </div>

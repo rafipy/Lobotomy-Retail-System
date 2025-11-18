@@ -22,16 +22,15 @@ export function DashboardHeader({
   };
 
   return (
-    <header className="border-b-4 border-red-500 bg-black/80 backdrop-blur-sm sticky top-0 z-30 w-full">
+    <header className="border-b-4 border-red-500 bg-black/80 backdrop-blur-sm sticky top-0 z-30 w-full animate-fade-in">
       <div className="w-full px-6 py-4">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-4">
-            {/* Menu button - now visible on all screen sizes */}
             <Button
               variant="ghost"
               size="icon"
               onClick={onMenuClick}
-              className="text-teal-200 hover:bg-red-900/50 border-2 border-teal-500/50 hover:border-teal-400"
+              className="text-teal-200 hover:bg-transparent border-2 hover:text-white border-teal-500/50 hover:border-teal-400"
             >
               <Menu className="h-6 w-6" />
             </Button>

@@ -7,9 +7,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Package,
-  Users,
   ShoppingCart,
-  BarChart3,
   Settings,
   FileText,
   AlertCircle,
@@ -114,7 +112,7 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
               variant="ghost"
               size="icon"
               onClick={() => setIsCollapsed(!isCollapsed)}
-              className="text-teal-200 hover:bg-red-900/50"
+              className="text-teal-200 hover:bg-red-900/50 hover:text-white"
             >
               {isCollapsed ? (
                 <ChevronRight className="h-5 w-5" />

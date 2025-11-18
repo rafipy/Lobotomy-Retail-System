@@ -93,7 +93,7 @@ const DUMMY_ITEMS: ItemData[] = [
     id: 8,
     name: "Coffee (Premium Blend)",
     description:
-      "High-quality coffee beans. Sourced from sector 7. Keeps you alert during night shifts.",
+      "High-quality coffee beans. Sourced from K Corp. Keeps you alert during night shifts.",
     stock: 198,
     price: 15.99,
     imageUrl: "/placeholder-coffee.jpg",

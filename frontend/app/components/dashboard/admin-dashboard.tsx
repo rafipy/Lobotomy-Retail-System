@@ -29,7 +29,7 @@ export function AdminDashboard() {
         />
 
         {/* Content */}
-        <div className="w-full max-w-7xl mx-auto px-6 py-8">
+        <div className="w-full max-w-7xl mx-auto px-6 py-8 animate-fade-in">
           <StatsCards />
           <div className="bg-black/40 border-2 border-red-500 rounded-xl p-6 backdrop-blur-sm">
             <div className="mb-6">
