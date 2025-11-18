@@ -41,7 +41,6 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 def get_current_user(
     token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
 ):
-    # Import here to avoid circular dependency
     from app.models.user import User
     from app.schemas.user import TokenData
 
