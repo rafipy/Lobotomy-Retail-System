@@ -26,3 +26,6 @@ app.include_router(admin.router)
 @app.get("/")
 def read_root():
     return {"message": "Retail DBMS API is running"}
+
+    
+
