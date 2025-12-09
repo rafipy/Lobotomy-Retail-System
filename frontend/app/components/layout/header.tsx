@@ -15,7 +15,7 @@ export function Header({ username, onMenuClick }: HeaderProps) {
 
   const handleLogout = () => {
     clearAuth();
-    router.push("/admin/login");
+    router.push("/admin");
   };
 
   return (

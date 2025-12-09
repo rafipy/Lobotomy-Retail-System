@@ -1,115 +1,112 @@
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from pydantic import ValidationError
+from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
-from app.models.product import Product
-from app.schemas.product import ProductCreate, ProductResponse, ProductUpdate
+from app.models import Product, Supplier
+from app.schemas.product import (
+    ProductCreate,
+    ProductListResponse,
+    ProductResponse,
+    ProductUpdate,
+)
 
 router = APIRouter(prefix="/products", tags=["products"])
 
-# Dummy data to seed the database
-SEED_PRODUCTS = [
-    {
-        "name": "L. CORP Energy Drink",
-        "description": "Official L. CORP branded energy drink. Side effects may include: enhanced productivity, mild paranoia.",
-        "selling_price": 4.99,
-        "purchase_price": 2.50,
-        "supplier_name": "K Corp Beverages",
-        "stock": 247,
-        "category": "Beverages",
-    },
-    {
-        "name": "Emergency Ration Pack",
-        "description": "Standard issue rations for extended shifts. Nutritionally complete. Taste not guaranteed.",
-        "selling_price": 12.99,
-        "purchase_price": 7.25,
-        "supplier_name": "W Corp Supplies",
-        "stock": 156,
-        "category": "Food",
-    },
-    {
-        "name": "L. CORP Safety Helmet",
-        "description": "Regulation safety equipment. Protects against falling objects and minor anomalies.",
-        "selling_price": 45.00,
-        "purchase_price": 28.00,
-        "supplier_name": "R Corp Equipment",
-        "stock": 89,
-        "category": "Safety Equipment",
-    },
-    {
-        "name": "Employee ID Badge",
-        "description": "Official identification badge. Required for all facility access. Do not lose.",
-        "selling_price": 5.00,
-        "purchase_price": 1.50,
-        "supplier_name": "L. CORP Internal",
-        "stock": 342,
-        "category": "Accessories",
-    },
-    {
-        "name": "Flashlight (Heavy Duty)",
-        "description": "Industrial-grade flashlight. Essential for navigating dark sectors. Battery life: 72 hours.",
-        "selling_price": 29.99,
-        "purchase_price": 15.00,
-        "supplier_name": "N Corp Tools",
-        "stock": 23,
-        "category": "Tools",
-    },
-    {
-        "name": "First Aid Kit",
-        "description": "Comprehensive medical supplies. For minor injuries only. Major injuries require medical bay.",
-        "selling_price": 34.50,
-        "purchase_price": 18.75,
-        "supplier_name": "T Corp Medical",
-        "stock": 67,
-        "category": "Medical",
-    },
-    {
-        "name": "Maintenance Manual",
-        "description": "Complete maintenance procedures. Updated quarterly. Read before operating equipment.",
-        "selling_price": 19.99,
-        "purchase_price": 8.00,
-        "supplier_name": "L. CORP Publishing",
-        "stock": 12,
-        "category": "Documentation",
-    },
-    {
-        "name": "Coffee (Premium Blend)",
-        "description": "High-quality coffee beans. Sourced from K Corp. Keeps you alert during night shifts.",
-        "selling_price": 15.99,
-        "purchase_price": 9.50,
-        "supplier_name": "K Corp Beverages",
-        "stock": 198,
-        "category": "Beverages",
-    },
-]
 
+@router.get("/", response_model=List[ProductListResponse])
+def get_products(db: Session = Depends(get_db)):
+    """Get all products with supplier names"""
+    products = (
+        db.query(Product)
+        .options(joinedload(Product.supplier))
+        .order_by(Product.name)
+        .all()
+    )
 
-@router.get("/", response_model=List[ProductResponse])
-def get_all_products(db: Session = Depends(get_db)):
-    products = db.query(Product).all()
-    return products
+    return [
+        ProductListResponse(
+            id=p.id,  # type: ignore[arg-type]
+            name=p.name,  # type: ignore[arg-type]
+            description=p.description,  # type: ignore[arg-type]
+            selling_price=p.selling_price,  # type: ignore[arg-type]
+            purchase_price=p.purchase_price,  # type: ignore[arg-type]
+            supplier_id=p.supplier_id,  # type: ignore[arg-type]
+            supplier_name=p.supplier.name if p.supplier else "Unknown",  # type: ignore[arg-type]
+            stock=p.stock,  # type: ignore[arg-type]
+            reorder_level=p.reorder_level,  # type: ignore[arg-type]
+            reorder_amount=p.reorder_amount,  # type: ignore[arg-type]
+            category=p.category,  # type: ignore[arg-type]
+            image_url=p.image_url,  # type: ignore[arg-type]
+            created_at=p.created_at,  # type: ignore[arg-type]
+            updated_at=p.updated_at,  # type: ignore[arg-type]
+        )
+        for p in products
+    ]
 
 
 @router.get("/{product_id}", response_model=ProductResponse)
 def get_product(product_id: int, db: Session = Depends(get_db)):
+    """Get a single product by ID"""
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     return product
 
 
-@router.post("/seed")
-def seed_products(db: Session = Depends(get_db)):
-    """Seed the database with dummy products (for development only)"""
-    existing = db.query(Product).first()
-    if existing:
-        return {"message": "Products already seeded"}
+@router.post("/", response_model=ProductResponse)
+def create_product(product_data: ProductCreate, db: Session = Depends(get_db)):
+    """Create a new product"""
+    # Verify supplier exists
+    supplier = (
+        db.query(Supplier).filter(Supplier.id == product_data.supplier_id).first()
+    )
+    if not supplier:
+        raise HTTPException(status_code=400, detail="Supplier not found")
 
-    for product_data in SEED_PRODUCTS:
-        product = Product(**product_data)
-        db.add(product)
+    product = Product(**product_data.model_dump())
+    db.add(product)
+    db.commit()
+    db.refresh(product)
+    return product
+
+
+@router.put("/{product_id}", response_model=ProductResponse)
+def update_product(
+    product_id: int, product_data: ProductUpdate, db: Session = Depends(get_db)
+):
+    """Update an existing product"""
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    # If updating supplier_id, verify it exists
+    if product_data.supplier_id is not None:
+        supplier = (
+            db.query(Supplier).filter(Supplier.id == product_data.supplier_id).first()
+        )
+        if not supplier:
+            raise HTTPException(status_code=400, detail="Supplier not found")
+
+    # Update only provided fields
+    update_data = product_data.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(product, key, value)
 
     db.commit()
-    return {"message": f"Seeded {len(SEED_PRODUCTS)} products"}
+    db.refresh(product)
+    return product
+
+
+@router.delete("/{product_id}")
+def delete_product(product_id: int, db: Session = Depends(get_db)):
+    """Delete a product"""
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    db.delete(product)
+    db.commit()
+    return {"message": "Product deleted successfully"}

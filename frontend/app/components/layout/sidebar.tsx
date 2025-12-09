@@ -9,7 +9,7 @@ import {
   Package,
   ShoppingCart,
   Settings,
-  FileText,
+  User,
   AlertCircle,
   ChevronLeft,
   ChevronRight,
@@ -51,14 +51,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     },
 
     {
-      name: "Reports",
-      href: "/admin/reports",
-      icon: <FileText className="h-5 w-5" />,
-    },
-    {
-      name: "Incidents",
-      href: "/admin/incidents",
-      icon: <AlertCircle className="h-5 w-5" />,
+      name: "Customers",
+      href: "/admin/customers",
+      icon: <User className="h-5 w-5" />,
     },
     {
       name: "Settings",

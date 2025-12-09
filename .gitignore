@@ -1,4 +1,5 @@
 .env
 apikey.text
+backend/app/seed.py
 backend/.env
 backend/create_admin.py

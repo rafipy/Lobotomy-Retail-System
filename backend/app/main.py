@@ -1,15 +1,38 @@
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from pydantic import ValidationError
 
 from app.database import Base, engine
-from app.routers import admin, auth, products
+from app.models import Product, Supplier, User
+from app.routers import admin, auth, products, supplier, supplier_orders
 
 load_dotenv()
 
 app = FastAPI(title="Retail DBMS API")
 
 Base.metadata.create_all(bind=engine)
+
+try:
+    from app.seed import seed_database
+
+    seed_database()
+except ImportError:
+    print("No seed file found, skipping database seeding")
+
+
+# Custom exception handler for Pydantic validation errors
+@app.exception_handler(ValidationError)
+async def validation_exception_handler(request: Request, exc: ValidationError):
+    errors = exc.errors()
+    if errors:
+        # Get the first error message
+        first_error = errors[0]
+        message = first_error.get("msg", "Validation error")
+        return JSONResponse(status_code=400, content={"detail": message})
+    return JSONResponse(status_code=400, content={"detail": "Validation error"})
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -22,6 +45,8 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(admin.router)
 app.include_router(products.router)
+app.include_router(supplier.router)
+app.include_router(supplier_orders.router)
 
 
 @app.get("/")

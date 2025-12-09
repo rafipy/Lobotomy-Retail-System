@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { getProducts, Product } from "@/lib/api/products";
 import { Loader2 } from "lucide-react";
 import { getStockStatus } from "@/lib/stock-status";
@@ -85,10 +86,24 @@ export function ItemGallery() {
             >
               {/* Image Container */}
               <div className="relative h-48 bg-gray-900 border-b-2 border-red-500">
-                <div className="absolute inset-0 flex items-center justify-center text-gray-500">
+                {item.image_url ? (
+                  <Image
+                    src={item.image_url}
+                    alt={item.name}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                ) : null}
+                <div
+                  className={`absolute inset-0 flex items-center justify-center text-gray-500 ${item.image_url ? "hidden" : ""}`}
+                >
                   <div className="text-center p-4">
                     <div className="text-6xl mb-2">📦</div>
-                    <span className="text-sm">Image Placeholder</span>
+                    <span className="text-sm">No Image</span>
                   </div>
                 </div>
               </div>
