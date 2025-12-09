@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import Base, engine
-from app.routers import admin, auth
+from app.routers import admin, auth, products
 
 load_dotenv()
 
@@ -21,11 +21,9 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(admin.router)
+app.include_router(products.router)
 
 
 @app.get("/")
 def read_root():
     return {"message": "Retail DBMS API is running"}
-
-    
-

@@ -1,3 +1,4 @@
 .env
+apikey.text
 backend/.env
 backend/create_admin.py

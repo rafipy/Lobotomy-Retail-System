@@ -23,12 +23,12 @@ interface NavItem {
   icon: React.ReactNode;
 }
 
-interface DashboardSidebarProps {
+interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
+export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
 

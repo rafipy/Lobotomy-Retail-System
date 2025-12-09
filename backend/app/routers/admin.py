@@ -1,8 +1,9 @@
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+
 from app.database import get_db
 from app.models.user import User, UserRole
 from app.utils.auth import require_role
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 

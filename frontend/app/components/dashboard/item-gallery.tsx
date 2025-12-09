@@ -1,135 +1,58 @@
 "use client";
 
-import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getProducts, Product } from "@/lib/api/products";
+import { Loader2 } from "lucide-react";
+import { getStockStatus } from "@/lib/stock-status";
 
-export interface ItemData {
-  id: number;
-  name: string;
-  description: string;
-  stock: number;
-  price: number;
-  imageUrl: string;
-  category: string;
-}
-
-interface ItemGalleryProps {
-  items?: ItemData[];
-}
-
-// Dummy data for now
-const DUMMY_ITEMS: ItemData[] = [
-  {
-    id: 1,
-    name: "L. CORP Energy Drink",
-    description:
-      "Official L. CORP branded energy drink. Side effects may include: enhanced productivity, mild paranoia.",
-    stock: 247,
-    price: 4.99,
-    imageUrl: "/placeholder-energy-drink.jpg",
-    category: "Beverages",
-  },
-  {
-    id: 2,
-    name: "Emergency Ration Pack",
-    description:
-      "Standard issue rations for extended shifts. Nutritionally complete. Taste not guaranteed.",
-    stock: 156,
-    price: 12.99,
-    imageUrl: "/placeholder-ration.jpg",
-    category: "Food",
-  },
-  {
-    id: 3,
-    name: "L. CORP Safety Helmet",
-    description:
-      "Regulation safety equipment. Protects against falling objects and minor anomalies.",
-    stock: 89,
-    price: 45.0,
-    imageUrl: "/placeholder-helmet.jpg",
-    category: "Safety Equipment",
-  },
-  {
-    id: 4,
-    name: "Employee ID Badge",
-    description:
-      "Official identification badge. Required for all facility access. Do not lose.",
-    stock: 342,
-    price: 5.0,
-    imageUrl: "/placeholder-badge.jpg",
-    category: "Accessories",
-  },
-  {
-    id: 5,
-    name: "Flashlight (Heavy Duty)",
-    description:
-      "Industrial-grade flashlight. Essential for navigating dark sectors. Battery life: 72 hours.",
-    stock: 23,
-    price: 29.99,
-    imageUrl: "/placeholder-flashlight.jpg",
-    category: "Tools",
-  },
-  {
-    id: 6,
-    name: "First Aid Kit",
-    description:
-      "Comprehensive medical supplies. For minor injuries only. Major injuries require medical bay.",
-    stock: 67,
-    price: 34.5,
-    imageUrl: "/placeholder-firstaid.jpg",
-    category: "Medical",
-  },
-  {
-    id: 7,
-    name: "Maintenance Manual",
-    description:
-      "Complete maintenance procedures. Updated quarterly. Read before operating equipment.",
-    stock: 12,
-    price: 19.99,
-    imageUrl: "/placeholder-manual.jpg",
-    category: "Documentation",
-  },
-  {
-    id: 8,
-    name: "Coffee (Premium Blend)",
-    description:
-      "High-quality coffee beans. Sourced from K Corp. Keeps you alert during night shifts.",
-    stock: 198,
-    price: 15.99,
-    imageUrl: "/placeholder-coffee.jpg",
-    category: "Beverages",
-  },
-];
-
-export function ItemGallery({ items = DUMMY_ITEMS }: ItemGalleryProps) {
+export function ItemGallery() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
 
+  useEffect(() => {
+    async function fetchProducts() {
+      try {
+        setLoading(true);
+        const data = await getProducts();
+        setProducts(data);
+        setError(null);
+      } catch (err) {
+        setError("Failed to load products. Is the backend running?");
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchProducts();
+  }, []);
+
   // Extract unique categories
-  const categories = ["All", ...new Set(items.map((item) => item.category))];
+  const categories = ["All", ...new Set(products.map((item) => item.category))];
 
   const filteredItems =
     selectedCategory === "All"
-      ? items
-      : items.filter((item) => item.category === selectedCategory);
+      ? products
+      : products.filter((item) => item.category === selectedCategory);
 
-  const getStockStatus = (stock: number) => {
-    if (stock === 0) {
-      return {
-        text: "OUT OF STOCK",
-        color: "text-red-600 bg-red-950/50 border-red-600",
-      };
-    } else if (stock < 50) {
-      return {
-        text: `LOW STOCK: ${stock}`,
-        color: "text-yellow-400 bg-yellow-950/50 border-yellow-600",
-      };
-    } else {
-      return {
-        text: `IN STOCK: ${stock}`,
-        color: "text-teal-400 bg-teal-950/50 border-teal-600",
-      };
-    }
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-8 w-8 animate-spin text-teal-400" />
+        <span className="ml-3 text-gray-400">Loading products...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-16 text-red-400 border-2 border-red-500 rounded-xl bg-red-950/20">
+        <p className="text-xl font-body">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full animate-fade-in">
@@ -185,13 +108,13 @@ export function ItemGallery({ items = DUMMY_ITEMS }: ItemGalleryProps) {
                   <div className="flex justify-between items-center">
                     <span className="text-gray-400 font-body">Price:</span>
                     <span className="text-xl font-bold text-yellow-400">
-                      ${item.price.toFixed(2)}
+                      ${item.selling_price.toFixed(2)}
                     </span>
                   </div>
 
                   {/* Stock Status */}
                   <div
-                    className={`text-center py-2 px-3 rounded-lg border-2 font-bold text-sm ${stockStatus.color}`}
+                    className={`text-center py-2 px-3 rounded-lg border-2 font-bold text-sm ${stockStatus.className}`}
                   >
                     {stockStatus.text}
                   </div>

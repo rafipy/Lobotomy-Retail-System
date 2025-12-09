@@ -5,15 +5,12 @@ import { clearAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { LogOut, Menu } from "lucide-react";
 
-interface DashboardHeaderProps {
+interface HeaderProps {
   username: string;
   onMenuClick: () => void;
 }
 
-export function DashboardHeader({
-  username,
-  onMenuClick,
-}: DashboardHeaderProps) {
+export function Header({ username, onMenuClick }: HeaderProps) {
   const router = useRouter();
 
   const handleLogout = () => {
