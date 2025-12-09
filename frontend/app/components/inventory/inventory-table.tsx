@@ -30,8 +30,6 @@ import { SupplierOrderDialog } from "./supplier-order-dialog";
 import { BulkSupplierOrderDialog } from "./bulk-supplier-order-dialog";
 import { PendingSupplierOrders } from "./pending-supplier-orders";
 
-const LOW_STOCK_THRESHOLD = 50;
-
 function createColumns(onProductUpdated: () => void): ColumnDef<Product>[] {
   return [
     {
@@ -160,7 +158,7 @@ function createColumns(onProductUpdated: () => void): ColumnDef<Product>[] {
       header: "Actions",
       cell: ({ row }) => {
         const product = row.original;
-        const isLowStock = product.stock < LOW_STOCK_THRESHOLD;
+        const isLowStock = product.stock < product.reorder_level;
 
         return (
           <div className="flex items-center gap-1">
