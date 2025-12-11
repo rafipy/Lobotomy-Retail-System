@@ -14,29 +14,55 @@ import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-const DUMMY_USERS = [
-  { username: "admin", password: "password123" },
-  { username: "customer1", password: "test1234" },
-  { username: "demo", password: "demo1234" },
-];
-
 export function LoginForm() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
 
-    const user = DUMMY_USERS.find(
-      (u) => u.username === username && u.password === password,
-    );
+    try {
+      const response = await fetch("http://localhost:8000/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, password }),
+      });
 
-    if (user) {
-      console.log("Login successful:", username);
-      router.push("/dashboard");
-    } else {
-      alert("Invalid username or password");
+      if (!response.ok) {
+        const error = await response.json().catch(() => null);
+        alert(error?.detail || "Login failed");
+        setLoading(false);
+        return;
+      }
+
+      const data = await response.json();
+
+      // Expecting backend to return: access_token, role, username, user_id
+      localStorage.setItem("token", data.access_token);
+      localStorage.setItem("role", data.role);
+      localStorage.setItem("username", data.username);
+      if (data.user_id !== undefined && data.user_id !== null) {
+        localStorage.setItem("user_id", data.user_id.toString());
+      }
+
+      // Redirect based on role
+      if (data.role === "admin") {
+        router.push("/admin/dashboard");
+      } else if (data.role === "customer") {
+        router.push("/customer/dashboard");
+      } else {
+        router.push("/dashboard");
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+      alert("An error occurred during login");
+    } finally {
+      setLoading(false);
     }
   };
 
