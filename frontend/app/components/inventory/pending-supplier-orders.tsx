@@ -159,7 +159,7 @@ export function PendingSupplierOrders({
                     variant="ghost"
                     size="sm"
                     onClick={() => toggleExpanded(order.id)}
-                    className="text-gray-400 hover:text-white"
+                    className="text-gray-400 hover:bg-yellow-400"
                   >
                     {isExpanded ? (
                       <ChevronUp className="h-4 w-4" />
@@ -233,6 +233,7 @@ export function PendingSupplierOrders({
                         <th className="pb-2 text-right">Qty</th>
                         <th className="pb-2 text-right">Unit Price</th>
                         <th className="pb-2 text-right">Line Total</th>
+                        <th className="pb-2 text-right">Employee</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -252,6 +253,9 @@ export function PendingSupplierOrders({
                           </td>
                           <td className="py-2 text-right text-yellow-400">
                             ${item.line_total.toFixed(2)}
+                          </td>
+                          <td className="py-2 text-right text-gray-300">
+                            {order.employee_username}
                           </td>
                         </tr>
                       ))}

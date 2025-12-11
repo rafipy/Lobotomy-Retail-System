@@ -347,8 +347,8 @@ export function InventoryTable() {
           products
         </span>
         <span className="text-yellow-400">
-          {products.filter((p) => p.stock < LOW_STOCK_THRESHOLD).length} items
-          need restocking
+          {products.filter((p) => p.stock < p.reorder_level).length} items need
+          restocking
         </span>
       </div>
     </div>

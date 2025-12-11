@@ -21,8 +21,8 @@ class SupplierOrderItemResponse(BaseModel):
     product_id: int
     product_name: str
     quantity: int
-    unit_price: float  # Fetched from product.purchase_price
-    line_total: float  # Calculated: quantity * unit_price
+    unit_price: float
+    line_total: float
 
     class Config:
         from_attributes = True
@@ -34,20 +34,24 @@ class SupplierOrderCreate(BaseModel):
 
     product_id: int
     quantity: int
+    employee_id: Optional[int] = None
 
 
 class BulkSupplierOrderCreate(BaseModel):
     """For bulk order - multiple products"""
 
     items: list[SupplierOrderItemCreate]
+    employee_id: Optional[int] = None
 
 
 class SupplierOrderResponse(BaseModel):
     id: int
     supplier_id: int
     supplier_name: str
+    employee_id: Optional[int] = None
+    employee_username: Optional[str] = None
     status: SupplierOrderStatus
-    total_cost: float  # Calculated from items
+    total_cost: float
     items: list[SupplierOrderItemResponse]
     created_at: datetime
     updated_at: datetime
@@ -63,6 +67,8 @@ class SupplierOrderListResponse(BaseModel):
     id: int
     supplier_id: int
     supplier_name: str
+    employee_id: Optional[int] = None
+    employee_username: Optional[str] = None
     status: SupplierOrderStatus
     total_cost: float
     item_count: int
@@ -79,6 +85,8 @@ class SupplierOrderWithItems(BaseModel):
     id: int
     supplier_id: int
     supplier_name: str
+    employee_id: Optional[int] = None
+    employee_username: Optional[str] = None
     status: SupplierOrderStatus
     total_cost: float
     items: list[SupplierOrderItemResponse]

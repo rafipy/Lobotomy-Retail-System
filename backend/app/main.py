@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
 from app.database import Base, engine
-from app.models import Product, Supplier, User
+from app.models import Customer, Product, Supplier, User
 from app.routers import admin, auth, products, supplier, supplier_orders
 
 load_dotenv()
@@ -27,7 +27,6 @@ except ImportError:
 async def validation_exception_handler(request: Request, exc: ValidationError):
     errors = exc.errors()
     if errors:
-        # Get the first error message
         first_error = errors[0]
         message = first_error.get("msg", "Validation error")
         return JSONResponse(status_code=400, content={"detail": message})

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 
 from pydantic import BaseModel
@@ -24,8 +24,34 @@ class Token(BaseModel):
     token_type: str
     role: str
     username: str
+    user_id: int
 
 
 class TokenData(BaseModel):
     username: Optional[str] = None
     role: Optional[str] = None
+
+
+class CustomerRegister(BaseModel):
+    username: str
+    password: str
+    first_name: str
+    last_name: str
+    email: Optional[str] = None
+    phone_number: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    postal_code: Optional[str] = None
+    birth_date: Optional[date] = None
+
+
+class CustomerRegisterResponse(BaseModel):
+    id: int
+    username: str
+    customer_id: int
+    first_name: str
+    last_name: str
+    message: str
+
+    class Config:
+        from_attributes = True

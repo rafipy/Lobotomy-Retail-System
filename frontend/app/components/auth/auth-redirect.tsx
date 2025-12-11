@@ -29,8 +29,6 @@ export function AuthRedirect({
 
         if (authData?.role === "admin") {
           router.push("/admin/dashboard");
-        } else if (authData?.role === "employee") {
-          router.push("/employee/dashboard");
         } else if (authData?.role === "customer") {
           router.push("/customer/dashboard");
         } else {
@@ -45,7 +43,7 @@ export function AuthRedirect({
         const authData = getAuthData();
 
         if (!isAuthenticated() || authData?.role !== requiredRole) {
-          router.push("/admin/login");
+          router.push("/admin");
           setShouldRender(false);
         } else {
           setShouldRender(true);

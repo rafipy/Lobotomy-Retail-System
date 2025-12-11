@@ -42,9 +42,14 @@ export function SupplierOrderDialog({
 
     try {
       setLoading(true);
+
+      // Get the admin user_id from localStorage
+      const userId = localStorage.getItem("user_id");
+
       await createSupplierOrder({
         product_id: product.id,
         quantity: quantity,
+        employee_id: userId ? parseInt(userId) : undefined,
       });
 
       setOpen(false);

@@ -25,4 +25,6 @@ class Product(Base):
 
     # Relationships
     supplier = relationship("Supplier", back_populates="products")
-    supplier_order_items = relationship("SupplierOrderItem", back_populates="product")
+    supplier_order_items = relationship(
+        "SupplierOrderItem", back_populates="product", passive_deletes=True
+    )

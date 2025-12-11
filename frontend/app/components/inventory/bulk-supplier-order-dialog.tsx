@@ -79,7 +79,12 @@ export function BulkSupplierOrderDialog({
 
     try {
       setLoading(true);
-      await createBulkSupplierOrder({ items });
+      const userId = localStorage.getItem("user_id");
+
+      await createBulkSupplierOrder({
+        items,
+        employee_id: userId ? parseInt(userId) : undefined,
+      });
 
       setOpen(false);
       onOrderCreated();
@@ -191,7 +196,7 @@ export function BulkSupplierOrderDialog({
             </p>
           </div>
 
-          <DialogFooter className="mt-6 flex-shrink-0">
+          <DialogFooter className="mt-6 shrink-0">
             <Button
               type="button"
               variant="outline"

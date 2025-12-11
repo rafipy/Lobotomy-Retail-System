@@ -285,7 +285,7 @@ export function AddProductDialog({ onProductAdded }: AddProductDialogProps) {
                     <SelectItem
                       key={category}
                       value={category}
-                      className="focus:bg-teal-900/50 text-white"
+                      className="focus:bg-teal-400 text-white"
                     >
                       {category}
                     </SelectItem>

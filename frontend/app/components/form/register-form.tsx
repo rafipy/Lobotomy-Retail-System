@@ -17,15 +17,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { registerCustomer } from "@/lib/auth";
 
 export function RegisterForm() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [day, setDay] = useState("");
   const [month, setMonth] = useState("");
@@ -34,54 +41,42 @@ export function RegisterForm() {
   const [city, setCity] = useState("");
   const [postalCode, setPostalCode] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
 
-    if (!day || !month || !year) {
-      alert("Please select your complete date of birth");
-      return;
-    }
     if (password !== confirmPassword) {
-      alert("Passwords do not match");
+      setError("Passwords do not match");
       return;
     }
 
-    const birthDate = `${year}-${month}-${day}`;
-    const age = calculateAge(birthDate);
+    setLoading(true);
 
-    if (age < 18) {
-      alert("You must be at least 18 years old to register");
-      return;
+    try {
+      await registerCustomer({
+        username,
+        password,
+        first_name: firstName,
+        last_name: lastName,
+        email: email || undefined,
+        phone_number: phoneNumber || undefined,
+        address: address || undefined,
+        city: city || undefined,
+        postal_code: postalCode || undefined,
+      });
+
+      // Registration successful - redirect to login
+      alert("Registration successful! Please log in.");
+      router.push("/login");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Registration failed");
+    } finally {
+      setLoading(false);
     }
-
-    console.log({
-      username,
-      firstName,
-      lastName,
-      phoneNumber,
-      birthDate,
-      address,
-      city,
-      postalCode,
-    });
-  };
-
-  const calculateAge = (birthDate: string) => {
-    const today = new Date();
-    const birth = new Date(birthDate);
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    if (
-      monthDiff < 0 ||
-      (monthDiff === 0 && today.getDate() < birth.getDate())
-    ) {
-      age--;
-    }
-    return age;
   };
 
   const handleBack = () => {
-    window.history.back();
+    router.back();
   };
 
   return (
@@ -94,7 +89,8 @@ export function RegisterForm() {
                 variant="ghost"
                 type="button"
                 onClick={handleBack}
-                className="text-yellow-200 hover:bg-red-600  bg-black border-2 border-red-500"
+                disabled={loading}
+                className="text-yellow-200 hover:bg-red-600 bg-black border-2 border-red-500"
               >
                 <ArrowLeft className="h-6 w-6" />
               </Button>
@@ -106,23 +102,30 @@ export function RegisterForm() {
               city. Join today now!
             </FieldDescription>
 
+            {error && (
+              <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-2 rounded-lg text-sm mt-4">
+                {error}
+              </div>
+            )}
+
             <FieldGroup className="animate-fade-in-delay-200">
               <Field>
                 <FieldLabel className="text-white font-semibold">
-                  Username
+                  Username <span className="text-red-500">*</span>
                 </FieldLabel>
                 <Input
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Set your username here"
                   required
+                  disabled={loading}
                   className="bg-black/50 text-white border-2 border-teal-500 focus:border-yellow-200"
                 />
               </Field>
 
               <Field>
                 <FieldLabel className="text-white font-semibold">
-                  Password
+                  Password <span className="text-red-500">*</span>
                 </FieldLabel>
                 <Input
                   type="password"
@@ -131,13 +134,14 @@ export function RegisterForm() {
                   placeholder="Enter password (min 8 characters)"
                   required
                   minLength={8}
+                  disabled={loading}
                   className="bg-black/50 text-white border-2 border-teal-500 focus:border-yellow-200"
                 />
               </Field>
 
               <Field>
                 <FieldLabel className="text-white font-semibold">
-                  Confirm Password
+                  Confirm Password <span className="text-red-500">*</span>
                 </FieldLabel>
                 <Input
                   type="password"
@@ -146,32 +150,49 @@ export function RegisterForm() {
                   placeholder="Confirm your password"
                   required
                   minLength={8}
+                  disabled={loading}
                   className="bg-black/50 text-white border-2 border-teal-500 focus:border-yellow-200"
                 />
               </Field>
 
               <Field>
                 <FieldLabel className="text-white font-semibold">
-                  First Name
+                  First Name <span className="text-red-500">*</span>
                 </FieldLabel>
                 <Input
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   placeholder="Set your first name here"
                   required
+                  disabled={loading}
                   className="bg-black/50 text-white border-2 border-teal-500 focus:border-yellow-200"
                 />
               </Field>
 
               <Field>
                 <FieldLabel className="text-white font-semibold">
-                  Last Name
+                  Last Name <span className="text-red-500">*</span>
                 </FieldLabel>
                 <Input
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   placeholder="Set your last name here"
                   required
+                  disabled={loading}
+                  className="bg-black/50 text-white border-2 border-teal-500 focus:border-yellow-200"
+                />
+              </Field>
+
+              <Field>
+                <FieldLabel className="text-white font-semibold">
+                  Email
+                </FieldLabel>
+                <Input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  disabled={loading}
                   className="bg-black/50 text-white border-2 border-teal-500 focus:border-yellow-200"
                 />
               </Field>
@@ -184,7 +205,7 @@ export function RegisterForm() {
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   placeholder="0812 345 6789"
-                  required
+                  disabled={loading}
                   className="bg-black/50 text-white border-2 border-teal-500 focus:border-yellow-200"
                 />
                 <FieldDescription className="text-gray-300">
@@ -200,7 +221,7 @@ export function RegisterForm() {
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   placeholder="Street address"
-                  required
+                  disabled={loading}
                   className="bg-black/50 text-white border-2 border-teal-500 focus:border-yellow-200"
                 />
               </Field>
@@ -214,7 +235,7 @@ export function RegisterForm() {
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
                     placeholder="City"
-                    required
+                    disabled={loading}
                     className="bg-black/50 text-white border-2 border-teal-500 focus:border-yellow-200"
                   />
                 </Field>
@@ -227,16 +248,18 @@ export function RegisterForm() {
                     value={postalCode}
                     onChange={(e) => setPostalCode(e.target.value)}
                     placeholder="12345"
-                    required
+                    disabled={loading}
                     className="bg-black/50 text-white border-2 border-teal-500 focus:border-yellow-200"
                   />
                 </Field>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
-                <Field>
-                  <FieldLabel className="text-white text-sm">Day</FieldLabel>
-                  <Select value={day} onValueChange={setDay}>
+              <Field>
+                <FieldLabel className="text-white font-semibold">
+                  Date of Birth <span className="text-red-500">*</span>
+                </FieldLabel>
+                <div className="flex flex-row gap-2 ">
+                  <Select value={day} onValueChange={setDay} disabled={loading}>
                     <SelectTrigger
                       className={`bg-black/50 border-2 border-teal-500 ${day ? "text-white" : "text-gray-400"}`}
                     >
@@ -253,11 +276,12 @@ export function RegisterForm() {
                       })}
                     </SelectContent>
                   </Select>
-                </Field>
 
-                <Field>
-                  <FieldLabel className="text-white text-sm">Month</FieldLabel>
-                  <Select value={month} onValueChange={setMonth}>
+                  <Select
+                    value={month}
+                    onValueChange={setMonth}
+                    disabled={loading}
+                  >
                     <SelectTrigger
                       className={`bg-black/50 border-2 border-teal-500 ${month ? "text-white" : "text-gray-400"}`}
                     >
@@ -274,10 +298,7 @@ export function RegisterForm() {
                       })}
                     </SelectContent>
                   </Select>
-                </Field>
 
-                <Field>
-                  <FieldLabel className="text-white text-sm">Year</FieldLabel>
                   <Input
                     value={year}
                     onChange={(e) => setYear(e.target.value)}
@@ -285,20 +306,29 @@ export function RegisterForm() {
                     required
                     maxLength={4}
                     pattern="[0-9]{4}"
+                    disabled={loading}
                     className={`bg-black/50 border-2 border-teal-500 focus:border-yellow-200 ${year ? "text-white" : "text-gray-400"}`}
                   />
-                </Field>
-              </div>
+                </div>
+              </Field>
 
               <Field
                 orientation="horizontal"
-                className="gap-4 animate-fade-in-delay-400"
+                className="gap-4 animate-fade-in-delay-400 pt-4"
               >
                 <Button
                   type="submit"
+                  disabled={loading}
                   className="grow bg-yellow-200 text-black hover:bg-yellow-300 font-bold text-lg px-8 py-6"
                 >
-                  Submit
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Registering...
+                    </>
+                  ) : (
+                    "Register"
+                  )}
                 </Button>
               </Field>
             </FieldGroup>

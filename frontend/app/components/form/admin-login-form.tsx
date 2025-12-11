@@ -51,6 +51,7 @@ export function AdminLoginForm() {
       localStorage.setItem("token", data.access_token);
       localStorage.setItem("role", data.role);
       localStorage.setItem("username", data.username);
+      localStorage.setItem("user_id", data.user_id.toString());
 
       router.push("/admin/dashboard");
     } catch (error) {

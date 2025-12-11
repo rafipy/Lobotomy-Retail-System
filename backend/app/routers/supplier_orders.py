@@ -10,6 +10,7 @@ from app.models import (
     SupplierOrder,
     SupplierOrderItem,
     SupplierOrderStatus,
+    User,
 )
 from app.schemas.supplier_order import (
     BulkSupplierOrderCreate,
@@ -47,6 +48,10 @@ def build_order_response(order: SupplierOrder) -> SupplierOrderWithItems:
             "id": order.id,
             "supplier_id": order.supplier_id,
             "supplier_name": order.supplier.name if order.supplier else "Unknown",
+            "employee_id": order.employee_id,
+            "employee_username": order.created_by_user.username
+            if order.created_by_user
+            else None,
             "status": order.status,
             "total_cost": sum(item.line_total for item in items),
             "items": items,
@@ -63,6 +68,7 @@ def get_all_supplier_orders(db: Session = Depends(get_db)):
         db.query(SupplierOrder)
         .options(
             joinedload(SupplierOrder.supplier),
+            joinedload(SupplierOrder.created_by_user),
             joinedload(SupplierOrder.items).joinedload(SupplierOrderItem.product),
         )
         .order_by(SupplierOrder.created_at.desc())
@@ -75,6 +81,10 @@ def get_all_supplier_orders(db: Session = Depends(get_db)):
                 "id": order.id,
                 "supplier_id": order.supplier_id,
                 "supplier_name": order.supplier.name if order.supplier else "Unknown",
+                "employee_id": order.employee_id,
+                "employee_username": order.created_by_user.username
+                if order.created_by_user
+                else None,
                 "status": order.status,
                 "total_cost": calculate_total_cost(order),
                 "item_count": len(order.items),
@@ -93,6 +103,7 @@ def get_pending_supplier_orders(db: Session = Depends(get_db)):
         db.query(SupplierOrder)
         .options(
             joinedload(SupplierOrder.supplier),
+            joinedload(SupplierOrder.created_by_user),
             joinedload(SupplierOrder.items).joinedload(SupplierOrderItem.product),
         )
         .filter(
@@ -114,6 +125,7 @@ def get_supplier_order(order_id: int, db: Session = Depends(get_db)):
         db.query(SupplierOrder)
         .options(
             joinedload(SupplierOrder.supplier),
+            joinedload(SupplierOrder.created_by_user),
             joinedload(SupplierOrder.items).joinedload(SupplierOrderItem.product),
         )
         .filter(SupplierOrder.id == order_id)
@@ -140,9 +152,16 @@ def create_supplier_order(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
+    # Validate employee_id (admin user_id) if provided
+    if order_data.employee_id:
+        user = db.query(User).filter(User.id == order_data.employee_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
     # Create the order
     order = SupplierOrder(
         supplier_id=product.supplier_id,  # type: ignore[arg-type]
+        employee_id=order_data.employee_id,
         status=SupplierOrderStatus.PROCESSING,
     )
     db.add(order)
@@ -162,6 +181,7 @@ def create_supplier_order(
         db.query(SupplierOrder)
         .options(
             joinedload(SupplierOrder.supplier),
+            joinedload(SupplierOrder.created_by_user),
             joinedload(SupplierOrder.items).joinedload(SupplierOrderItem.product),
         )
         .filter(SupplierOrder.id == order.id)  # type: ignore[arg-type]
@@ -179,6 +199,12 @@ def create_bulk_supplier_order(
     bulk_data: BulkSupplierOrderCreate, db: Session = Depends(get_db)
 ):
     """Create supplier orders grouped by supplier"""
+    # Validate employee_id (admin user_id) if provided
+    if bulk_data.employee_id:
+        user = db.query(User).filter(User.id == bulk_data.employee_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
     # Group items by supplier
     supplier_items: dict[int, list[tuple[Product, int]]] = {}
 
@@ -192,7 +218,6 @@ def create_bulk_supplier_order(
         if not product:
             continue
 
-        # Extract supplier_id to a typed local variable
         sid: int = cast(int, product.supplier_id)
         if sid not in supplier_items:
             supplier_items[sid] = []
@@ -202,15 +227,14 @@ def create_bulk_supplier_order(
     created_orders: list[Any] = []
 
     for supplier_id, products_and_quantities in supplier_items.items():
-        # Create the order
         order = SupplierOrder(
             supplier_id=supplier_id,
+            employee_id=bulk_data.employee_id,
             status=SupplierOrderStatus.PROCESSING,
         )
         db.add(order)
         db.flush()
 
-        # Create order items
         for product, quantity in products_and_quantities:
             order_item = SupplierOrderItem(
                 supplier_order_id=order.id,  # type: ignore[arg-type]
@@ -223,11 +247,11 @@ def create_bulk_supplier_order(
 
     db.commit()
 
-    # Reload all created orders with relationships
     orders = (
         db.query(SupplierOrder)
         .options(
             joinedload(SupplierOrder.supplier),
+            joinedload(SupplierOrder.created_by_user),
             joinedload(SupplierOrder.items).joinedload(SupplierOrderItem.product),
         )
         .filter(SupplierOrder.id.in_(created_orders))
@@ -256,7 +280,7 @@ def mark_as_arrived(order_id: int, db: Session = Depends(get_db)):
 
 @router.put("/{order_id}/complete")
 def complete_supplier_order(order_id: int, db: Session = Depends(get_db)):
-    """Complete a supplier order and add stock to all products"""
+    """Complete a supplier order: add stock to products, then delete the order and its items."""
     order = (
         db.query(SupplierOrder)
         .options(
@@ -274,7 +298,6 @@ def complete_supplier_order(order_id: int, db: Session = Depends(get_db)):
             status_code=400, detail="Order must be marked as arrived first"
         )
 
-    # Update stock for all products in the order
     stock_updates = []
     for item in order.items:
         item.product.stock += item.quantity  # type: ignore[operator]
@@ -289,10 +312,11 @@ def complete_supplier_order(order_id: int, db: Session = Depends(get_db)):
     order.status = SupplierOrderStatus.COMPLETED  # type: ignore[assignment]
     order.completed_at = datetime.utcnow()  # type: ignore[assignment]
 
+    db.delete(order)
     db.commit()
 
     return {
-        "message": f"Order completed. Updated stock for {len(stock_updates)} products.",
+        "message": f"Order completed and removed. Updated stock for {len(stock_updates)} products.",
         "stock_updates": stock_updates,
     }
 

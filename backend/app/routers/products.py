@@ -5,7 +5,13 @@ from pydantic import ValidationError
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
-from app.models import Product, Supplier
+from app.models import (
+    Product,
+    Supplier,
+    SupplierOrder,
+    SupplierOrderItem,
+    SupplierOrderStatus,
+)
 from app.schemas.product import (
     ProductCreate,
     ProductListResponse,
@@ -102,10 +108,30 @@ def update_product(
 
 @router.delete("/{product_id}")
 def delete_product(product_id: int, db: Session = Depends(get_db)):
-    """Delete a product"""
+    """Delete a product unless it is included in any pending/arriving supplier orders."""
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
+
+    # Prevent deletion if there's any supplier_order_item for this product
+    # where the parent supplier_order is still PROCESSING or ARRIVED.
+    pending_item = (
+        db.query(SupplierOrderItem)
+        .join(SupplierOrder, SupplierOrderItem.supplier_order)
+        .filter(
+            SupplierOrderItem.product_id == product_id,
+            SupplierOrder.status.in_(
+                [SupplierOrderStatus.PROCESSING, SupplierOrderStatus.ARRIVED]
+            ),
+        )
+        .first()
+    )
+
+    if pending_item:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete product while there are incoming supplier orders (processing or arrived).",
+        )
 
     db.delete(product)
     db.commit()
