@@ -6,11 +6,11 @@ import { AdminHeader } from "@/app/components/layout/admin-header";
 import { AdminSidebar } from "@/app/components/layout/admin-sidebar";
 import { usePathname } from "next/navigation";
 
-interface AdminLayoutProps {
+interface CustomerLayoutProps {
   children: React.ReactNode;
 }
 
-export default function AdminLayout({ children }: AdminLayoutProps) {
+export default function CustomerLayout({ children }: CustomerLayoutProps) {
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -19,12 +19,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     return authData?.username || "";
   });
 
-  if (pathname === "/admin") {
+  if (pathname === "/customer") {
     return <>{children}</>;
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-b from-black to-red-950">
+    <div className="min-h-screen bg-linear-to-b from-black to-teal-950">
       <AdminSidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}

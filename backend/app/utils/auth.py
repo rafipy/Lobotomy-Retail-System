@@ -6,9 +6,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from sqlalchemy.orm import Session
 
-# Import these at the end to avoid circular imports
 from app.database import get_db
 
 SECRET_KEY = os.getenv("SECRET_KEY", "fallback-secret-key-only-for-dev")
@@ -38,10 +36,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 
-def get_current_user(
-    token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
-):
-    from app.models.user import User
+def get_current_user(token: str = Depends(oauth2_scheme), db: dict = Depends(get_db)):
     from app.schemas.user import TokenData
 
     credentials_exception = HTTPException(
@@ -59,17 +54,17 @@ def get_current_user(
     except JWTError:
         raise credentials_exception
 
-    user = db.query(User).filter(User.username == token_data.username).first()
+    cursor = db["cursor"]
+    cursor.execute("SELECT * FROM users WHERE username = %s", (token_data.username,))
+    user = cursor.fetchone()
     if user is None:
         raise credentials_exception
     return user
 
 
 def require_role(allowed_roles: list):
-    from app.models.user import User
-
-    def role_checker(current_user: User = Depends(get_current_user)):
-        if current_user.role not in allowed_roles:
+    def role_checker(current_user=Depends(get_current_user)):
+        if current_user["role"] not in allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You don't have permission to access this resource",

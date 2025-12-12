@@ -6,7 +6,7 @@ from pydantic import ValidationError
 
 from app.database import Base, engine
 from app.models import Customer, Product, Supplier, User
-from app.routers import admin, auth, products, supplier, supplier_orders
+from app.routers import auth, products, supplier, supplier_orders
 
 load_dotenv()
 
@@ -42,7 +42,6 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
-app.include_router(admin.router)
 app.include_router(products.router)
 app.include_router(supplier.router)
 app.include_router(supplier_orders.router)

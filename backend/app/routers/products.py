@@ -1,17 +1,10 @@
+from datetime import datetime
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import ValidationError
-from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
-from app.models import (
-    Product,
-    Supplier,
-    SupplierOrder,
-    SupplierOrderItem,
-    SupplierOrderStatus,
-)
 from app.schemas.product import (
     ProductCreate,
     ProductListResponse,
@@ -23,116 +16,147 @@ router = APIRouter(prefix="/products", tags=["products"])
 
 
 @router.get("/", response_model=List[ProductListResponse])
-def get_products(db: Session = Depends(get_db)):
-    """Get all products with supplier names"""
-    products = (
-        db.query(Product)
-        .options(joinedload(Product.supplier))
-        .order_by(Product.name)
-        .all()
+def get_products(db: dict = Depends(get_db)):
+    cursor = db["cursor"]
+    cursor.execute(
+        """
+        SELECT p.*, s.name as supplier_name
+        FROM products p
+        LEFT JOIN suppliers s ON p.supplier_id = s.id
+        ORDER BY p.name
+        """
     )
-
-    return [
-        ProductListResponse(
-            id=p.id,  # type: ignore[arg-type]
-            name=p.name,  # type: ignore[arg-type]
-            description=p.description,  # type: ignore[arg-type]
-            selling_price=p.selling_price,  # type: ignore[arg-type]
-            purchase_price=p.purchase_price,  # type: ignore[arg-type]
-            supplier_id=p.supplier_id,  # type: ignore[arg-type]
-            supplier_name=p.supplier.name if p.supplier else "Unknown",  # type: ignore[arg-type]
-            stock=p.stock,  # type: ignore[arg-type]
-            reorder_level=p.reorder_level,  # type: ignore[arg-type]
-            reorder_amount=p.reorder_amount,  # type: ignore[arg-type]
-            category=p.category,  # type: ignore[arg-type]
-            image_url=p.image_url,  # type: ignore[arg-type]
-            created_at=p.created_at,  # type: ignore[arg-type]
-            updated_at=p.updated_at,  # type: ignore[arg-type]
+    rows = cursor.fetchall()
+    # Map DB rows into the response model expected by Pydantic
+    results = []
+    for p in rows:
+        results.append(
+            ProductListResponse.model_validate(
+                {
+                    "id": p["id"],
+                    "name": p["name"],
+                    "description": p["description"],
+                    "selling_price": p["selling_price"],
+                    "purchase_price": p["purchase_price"],
+                    "supplier_id": p["supplier_id"],
+                    "supplier_name": p.get("supplier_name") or "Unknown",
+                    "stock": p["stock"],
+                    "reorder_level": p["reorder_level"],
+                    "reorder_amount": p["reorder_amount"],
+                    "category": p["category"],
+                    "image_url": p["image_url"],
+                    "created_at": p.get("created_at"),
+                    "updated_at": p.get("updated_at"),
+                }
+            )
         )
-        for p in products
-    ]
+    return results
 
 
 @router.get("/{product_id}", response_model=ProductResponse)
-def get_product(product_id: int, db: Session = Depends(get_db)):
-    """Get a single product by ID"""
-    product = db.query(Product).filter(Product.id == product_id).first()
+def get_product(product_id: int, db: dict = Depends(get_db)):
+    cursor = db["cursor"]
+    cursor.execute("SELECT * FROM products WHERE id = %s", (product_id,))
+    product = cursor.fetchone()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     return product
 
 
 @router.post("/", response_model=ProductResponse)
-def create_product(product_data: ProductCreate, db: Session = Depends(get_db)):
-    """Create a new product"""
+def create_product(product_data: ProductCreate, db: dict = Depends(get_db)):
+    cursor = db["cursor"]
     # Verify supplier exists
-    supplier = (
-        db.query(Supplier).filter(Supplier.id == product_data.supplier_id).first()
+    cursor.execute(
+        "SELECT id FROM suppliers WHERE id = %s", (product_data.supplier_id,)
     )
-    if not supplier:
+    if not cursor.fetchone():
         raise HTTPException(status_code=400, detail="Supplier not found")
 
-    product = Product(**product_data.model_dump())
-    db.add(product)
-    db.commit()
-    db.refresh(product)
-    return product
+    cursor.execute(
+        """
+        INSERT INTO products
+        (name, description, selling_price, purchase_price, supplier_id, stock, reorder_level, reorder_amount, category, image_url, created_at, updated_at)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        """,
+        (
+            product_data.name,
+            product_data.description,
+            product_data.selling_price,
+            product_data.purchase_price,
+            product_data.supplier_id,
+            product_data.stock or 0,
+            product_data.reorder_level or 50,
+            product_data.reorder_amount or 100,
+            product_data.category,
+            product_data.image_url,
+            datetime.utcnow(),
+            datetime.utcnow(),
+        ),
+    )
+    new_id = cursor.lastrowid
+    cursor.execute("SELECT * FROM products WHERE id = %s", (new_id,))
+    return cursor.fetchone()
 
 
 @router.put("/{product_id}", response_model=ProductResponse)
 def update_product(
-    product_id: int, product_data: ProductUpdate, db: Session = Depends(get_db)
+    product_id: int, product_data: ProductUpdate, db: dict = Depends(get_db)
 ):
-    """Update an existing product"""
-    product = db.query(Product).filter(Product.id == product_id).first()
-    if not product:
+    cursor = db["cursor"]
+    cursor.execute("SELECT * FROM products WHERE id = %s", (product_id,))
+    existing = cursor.fetchone()
+    if not existing:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    # If updating supplier_id, verify it exists
-    if product_data.supplier_id is not None:
-        supplier = (
-            db.query(Supplier).filter(Supplier.id == product_data.supplier_id).first()
+    update_data = product_data.model_dump(exclude_unset=True)
+
+    if "supplier_id" in update_data and update_data["supplier_id"] is not None:
+        cursor.execute(
+            "SELECT id FROM suppliers WHERE id = %s", (update_data["supplier_id"],)
         )
-        if not supplier:
+        if not cursor.fetchone():
             raise HTTPException(status_code=400, detail="Supplier not found")
 
-    # Update only provided fields
-    update_data = product_data.model_dump(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(product, key, value)
+    if not update_data:
+        return existing
 
-    db.commit()
-    db.refresh(product)
-    return product
+    set_clauses = []
+    params = []
+    for k, v in update_data.items():
+        set_clauses.append(f"{k} = %s")
+        params.append(v)
+    params.append(product_id)
+    sql = f"UPDATE products SET {', '.join(set_clauses)}, updated_at = %s WHERE id = %s"
+    params.insert(-1, datetime.utcnow())  # insert updated_at before id
+    cursor.execute(sql, tuple(params))
+    cursor.execute("SELECT * FROM products WHERE id = %s", (product_id,))
+    return cursor.fetchone()
 
 
 @router.delete("/{product_id}")
-def delete_product(product_id: int, db: Session = Depends(get_db)):
-    """Delete a product unless it is included in any pending/arriving supplier orders."""
-    product = db.query(Product).filter(Product.id == product_id).first()
+def delete_product(product_id: int, db: dict = Depends(get_db)):
+    cursor = db["cursor"]
+    cursor.execute("SELECT * FROM products WHERE id = %s", (product_id,))
+    product = cursor.fetchone()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    # Prevent deletion if there's any supplier_order_item for this product
-    # where the parent supplier_order is still PROCESSING or ARRIVED.
-    pending_item = (
-        db.query(SupplierOrderItem)
-        .join(SupplierOrder, SupplierOrderItem.supplier_order)
-        .filter(
-            SupplierOrderItem.product_id == product_id,
-            SupplierOrder.status.in_(
-                [SupplierOrderStatus.PROCESSING, SupplierOrderStatus.ARRIVED]
-            ),
-        )
-        .first()
+    cursor.execute(
+        """
+        SELECT soi.* FROM supplier_order_items soi
+        JOIN supplier_orders so ON soi.supplier_order_id = so.id
+        WHERE soi.product_id = %s AND so.status IN (%s, %s)
+        LIMIT 1
+        """,
+        (product_id, "processing", "arrived"),
     )
-
-    if pending_item:
+    pending = cursor.fetchone()
+    if pending:
         raise HTTPException(
             status_code=400,
             detail="Cannot delete product while there are incoming supplier orders (processing or arrived).",
         )
 
-    db.delete(product)
-    db.commit()
+    cursor.execute("DELETE FROM products WHERE id = %s", (product_id,))
     return {"message": "Product deleted successfully"}

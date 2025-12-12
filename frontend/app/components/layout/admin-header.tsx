@@ -10,7 +10,7 @@ interface HeaderProps {
   onMenuClick: () => void;
 }
 
-export function Header({ username, onMenuClick }: HeaderProps) {
+export function AdminHeader({ username, onMenuClick }: HeaderProps) {
   const router = useRouter();
 
   const handleLogout = () => {

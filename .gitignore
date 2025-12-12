@@ -3,3 +3,7 @@ apikey.text
 backend/app/seed.py
 backend/.env
 backend/create_admin.py
+backend/venv
+backend/uv.lock
+backend/pyproject.toml
+backend/uv.lock

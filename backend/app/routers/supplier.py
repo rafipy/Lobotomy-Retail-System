@@ -1,10 +1,8 @@
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Supplier
 from app.schemas.supplier import SupplierBrief, SupplierCreate, SupplierResponse
 
 router = APIRouter(prefix="/suppliers", tags=["suppliers"])
@@ -249,38 +247,50 @@ SEED_SUPPLIERS = [
 
 
 @router.get("/", response_model=List[SupplierResponse])
-def get_all_suppliers(db: Session = Depends(get_db)):
-    """Get all suppliers"""
-    suppliers = db.query(Supplier).all()
+def get_all_suppliers(db: dict = Depends(get_db)):
+    cursor = db["cursor"]
+    cursor.execute("SELECT * FROM suppliers ORDER BY id")
+    suppliers = cursor.fetchall()
     return suppliers
 
 
 @router.get("/active", response_model=List[SupplierBrief])
-def get_active_suppliers(db: Session = Depends(get_db)):
-    """Get all suppliers for dropdowns"""
-    suppliers = db.query(Supplier).order_by(Supplier.code).all()
-    return suppliers
+def get_active_suppliers(db: dict = Depends(get_db)):
+    cursor = db["cursor"]
+    cursor.execute("SELECT id, code, name FROM suppliers ORDER BY code")
+    return cursor.fetchall()
 
 
 @router.get("/{supplier_id}", response_model=SupplierResponse)
-def get_supplier(supplier_id: int, db: Session = Depends(get_db)):
-    """Get a specific supplier by ID"""
-    supplier = db.query(Supplier).filter(Supplier.id == supplier_id).first()
+def get_supplier(supplier_id: int, db: dict = Depends(get_db)):
+    cursor = db["cursor"]
+    cursor.execute("SELECT * FROM suppliers WHERE id = %s", (supplier_id,))
+    supplier = cursor.fetchone()
     if not supplier:
         raise HTTPException(status_code=404, detail="Supplier not found")
     return supplier
 
 
 @router.post("/seed")
-def seed_suppliers(db: Session = Depends(get_db)):
-    """Seed the database with Wing suppliers (for development only)"""
-    existing = db.query(Supplier).first()
-    if existing:
+def seed_suppliers(db: dict = Depends(get_db)):
+    cursor = db["cursor"]
+    cursor.execute("SELECT 1 FROM suppliers LIMIT 1")
+    if cursor.fetchone():
         return {"message": "Suppliers already seeded"}
 
-    for supplier_data in SEED_SUPPLIERS:
-        supplier = Supplier(**supplier_data)
-        db.add(supplier)
-
-    db.commit()
-    return {"message": f"Seeded {len(SEED_SUPPLIERS)} suppliers (A-Z Corps)"}
+    for s in SEED_SUPPLIERS:
+        cursor.execute(
+            """
+            INSERT INTO suppliers (code, name, full_name, description, address, contact_email, contact_phone)
+            VALUES (%s,%s,%s,%s,%s,%s,%s)
+            """,
+            (
+                s["code"],
+                s["name"],
+                s["full_name"],
+                s.get("description"),
+                s["address"],
+                s.get("contact_email"),
+                s.get("contact_phone"),
+            ),
+        )

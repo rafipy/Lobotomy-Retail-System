@@ -1,17 +1,9 @@
 from datetime import datetime
-from typing import Any, List, cast
+from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
-from app.models import (
-    Product,
-    SupplierOrder,
-    SupplierOrderItem,
-    SupplierOrderStatus,
-    User,
-)
 from app.schemas.supplier_order import (
     BulkSupplierOrderCreate,
     SupplierOrderCreate,
@@ -23,297 +15,334 @@ from app.schemas.supplier_order import (
 router = APIRouter(prefix="/supplier-orders", tags=["supplier-orders"])
 
 
-def calculate_total_cost(order: SupplierOrder) -> float:
-    """Calculate total cost from items using current product prices"""
-    return sum(item.quantity * item.product.purchase_price for item in order.items)  # type: ignore[misc]
+def calculate_total_cost(items: list[dict]) -> float:
+    return sum(i["quantity"] * i["purchase_price"] for i in items)
 
 
-def build_order_response(order: SupplierOrder) -> SupplierOrderWithItems:
-    """Helper to build order response with items"""
-    items = []
-    for item in order.items:
-        unit_price = item.product.purchase_price
-        items.append(
+def build_order_response(order_row: dict, items: list[dict]) -> SupplierOrderWithItems:
+    item_responses = []
+    for it in items:
+        item_responses.append(
             SupplierOrderItemResponse(
-                product_id=item.product_id,  # type: ignore[arg-type]
-                product_name=item.product.name,  # type: ignore[arg-type]
-                quantity=item.quantity,  # type: ignore[arg-type]
-                unit_price=unit_price,  # type: ignore[arg-type]
-                line_total=item.quantity * unit_price,  # type: ignore[arg-type]
+                product_id=it["product_id"],
+                product_name=it["product_name"],
+                quantity=it["quantity"],
+                unit_price=it["purchase_price"],
+                line_total=it["quantity"] * it["purchase_price"],
             )
         )
 
     return SupplierOrderWithItems.model_validate(
         {
-            "id": order.id,
-            "supplier_id": order.supplier_id,
-            "supplier_name": order.supplier.name if order.supplier else "Unknown",
-            "employee_id": order.employee_id,
-            "employee_username": order.created_by_user.username
-            if order.created_by_user
-            else None,
-            "status": order.status,
-            "total_cost": sum(item.line_total for item in items),
-            "items": items,
-            "created_at": order.created_at,
-            "completed_at": order.completed_at,
+            "id": order_row["id"],
+            "supplier_id": order_row["supplier_id"],
+            "supplier_name": order_row.get("supplier_name") or "Unknown",
+            "employee_id": order_row.get("employee_id"),
+            "employee_username": order_row.get("employee_username"),
+            "status": order_row["status"],
+            "total_cost": sum(i.line_total for i in item_responses),
+            "items": item_responses,
+            "created_at": order_row.get("created_at"),
+            "completed_at": order_row.get("completed_at"),
         }
     )
 
 
 @router.get("/", response_model=List[SupplierOrderListResponse])
-def get_all_supplier_orders(db: Session = Depends(get_db)):
-    """Get all supplier orders"""
-    orders = (
-        db.query(SupplierOrder)
-        .options(
-            joinedload(SupplierOrder.supplier),
-            joinedload(SupplierOrder.created_by_user),
-            joinedload(SupplierOrder.items).joinedload(SupplierOrderItem.product),
-        )
-        .order_by(SupplierOrder.created_at.desc())
-        .all()
+def get_all_supplier_orders(db: dict = Depends(get_db)):
+    cursor = db["cursor"]
+    cursor.execute(
+        """
+        SELECT so.*, s.name as supplier_name, u.username as employee_username
+        FROM supplier_orders so
+        LEFT JOIN suppliers s ON so.supplier_id = s.id
+        LEFT JOIN users u ON so.employee_id = u.id
+        ORDER BY so.created_at DESC
+        """
     )
-
-    return [
-        SupplierOrderListResponse.model_validate(
-            {
-                "id": order.id,
-                "supplier_id": order.supplier_id,
-                "supplier_name": order.supplier.name if order.supplier else "Unknown",
-                "employee_id": order.employee_id,
-                "employee_username": order.created_by_user.username
-                if order.created_by_user
-                else None,
-                "status": order.status,
-                "total_cost": calculate_total_cost(order),
-                "item_count": len(order.items),
-                "created_at": order.created_at,
-                "completed_at": order.completed_at,
-            }
+    orders = cursor.fetchall()
+    results = []
+    for o in orders:
+        cursor.execute(
+            """
+            SELECT soi.product_id, soi.quantity, p.name as product_name, p.purchase_price
+            FROM supplier_order_items soi
+            JOIN products p ON soi.product_id = p.id
+            WHERE soi.supplier_order_id = %s
+            """,
+            (o["id"],),
         )
-        for order in orders
-    ]
+        items = cursor.fetchall()
+        results.append(
+            SupplierOrderListResponse.model_validate(
+                {
+                    "id": o["id"],
+                    "supplier_id": o["supplier_id"],
+                    "supplier_name": o.get("supplier_name") or "Unknown",
+                    "employee_id": o.get("employee_id"),
+                    "employee_username": o.get("employee_username"),
+                    "status": o["status"],
+                    "total_cost": calculate_total_cost(items),
+                    "item_count": len(items),
+                    "created_at": o.get("created_at"),
+                    "completed_at": o.get("completed_at"),
+                }
+            )
+        )
+    return results
 
 
 @router.get("/pending", response_model=List[SupplierOrderWithItems])
-def get_pending_supplier_orders(db: Session = Depends(get_db)):
-    """Get all pending (processing/arrived) supplier orders with full details"""
-    orders = (
-        db.query(SupplierOrder)
-        .options(
-            joinedload(SupplierOrder.supplier),
-            joinedload(SupplierOrder.created_by_user),
-            joinedload(SupplierOrder.items).joinedload(SupplierOrderItem.product),
-        )
-        .filter(
-            SupplierOrder.status.in_(
-                [SupplierOrderStatus.PROCESSING, SupplierOrderStatus.ARRIVED]
-            )
-        )
-        .order_by(SupplierOrder.created_at.desc())
-        .all()
+def get_pending_supplier_orders(db: dict = Depends(get_db)):
+    cursor = db["cursor"]
+    cursor.execute(
+        """
+        SELECT so.*, s.name as supplier_name, u.username as employee_username
+        FROM supplier_orders so
+        LEFT JOIN suppliers s ON so.supplier_id = s.id
+        LEFT JOIN users u ON so.employee_id = u.id
+        WHERE so.status IN (%s, %s)
+        ORDER BY so.created_at DESC
+        """,
+        ("processing", "arrived"),
     )
-
-    return [build_order_response(order) for order in orders]
+    orders = cursor.fetchall()
+    results = []
+    for o in orders:
+        cursor.execute(
+            """
+            SELECT soi.product_id, soi.quantity, p.name as product_name, p.purchase_price
+            FROM supplier_order_items soi
+            JOIN products p ON soi.product_id = p.id
+            WHERE soi.supplier_order_id = %s
+            """,
+            (o["id"],),
+        )
+        items = cursor.fetchall()
+        results.append(build_order_response(o, items))
+    return results
 
 
 @router.get("/{order_id}", response_model=SupplierOrderWithItems)
-def get_supplier_order(order_id: int, db: Session = Depends(get_db)):
-    """Get a specific supplier order with items"""
-    order = (
-        db.query(SupplierOrder)
-        .options(
-            joinedload(SupplierOrder.supplier),
-            joinedload(SupplierOrder.created_by_user),
-            joinedload(SupplierOrder.items).joinedload(SupplierOrderItem.product),
-        )
-        .filter(SupplierOrder.id == order_id)
-        .first()
+def get_supplier_order(order_id: int, db: dict = Depends(get_db)):
+    cursor = db["cursor"]
+    cursor.execute(
+        """
+        SELECT so.*, s.name as supplier_name, u.username as employee_username
+        FROM supplier_orders so
+        LEFT JOIN suppliers s ON so.supplier_id = s.id
+        LEFT JOIN users u ON so.employee_id = u.id
+        WHERE so.id = %s
+        """,
+        (order_id,),
     )
-
+    order = cursor.fetchone()
     if not order:
         raise HTTPException(status_code=404, detail="Supplier order not found")
 
-    return build_order_response(order)
+    cursor.execute(
+        """
+        SELECT soi.product_id, soi.quantity, p.name as product_name, p.purchase_price
+        FROM supplier_order_items soi
+        JOIN products p ON soi.product_id = p.id
+        WHERE soi.supplier_order_id = %s
+        """,
+        (order_id,),
+    )
+    items = cursor.fetchall()
+    return build_order_response(order, items)
 
 
 @router.post("/", response_model=SupplierOrderWithItems)
-def create_supplier_order(
-    order_data: SupplierOrderCreate, db: Session = Depends(get_db)
-):
-    """Create a new supplier order for a single product"""
-    product = (
-        db.query(Product)
-        .options(joinedload(Product.supplier))
-        .filter(Product.id == order_data.product_id)
-        .first()
+def create_supplier_order(order_data: SupplierOrderCreate, db: dict = Depends(get_db)):
+    cursor = db["cursor"]
+    # fetch product and supplier
+    cursor.execute(
+        "SELECT p.*, s.name as supplier_name FROM products p LEFT JOIN suppliers s ON p.supplier_id = s.id WHERE p.id = %s",
+        (order_data.product_id,),
     )
+    product = cursor.fetchone()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    # Validate employee_id (admin user_id) if provided
     if order_data.employee_id:
-        user = db.query(User).filter(User.id == order_data.employee_id).first()
-        if not user:
+        cursor.execute(
+            "SELECT id, username FROM users WHERE id = %s", (order_data.employee_id,)
+        )
+        if not cursor.fetchone():
             raise HTTPException(status_code=404, detail="User not found")
 
-    # Create the order
-    order = SupplierOrder(
-        supplier_id=product.supplier_id,  # type: ignore[arg-type]
-        employee_id=order_data.employee_id,
-        status=SupplierOrderStatus.PROCESSING,
+    # create order
+    cursor.execute(
+        "INSERT INTO supplier_orders (supplier_id, employee_id, status, created_at) VALUES (%s,%s,%s,%s)",
+        (
+            product["supplier_id"],
+            order_data.employee_id,
+            "processing",
+            datetime.utcnow(),
+        ),
     )
-    db.add(order)
-    db.flush()
+    order_id = cursor.lastrowid
 
-    # Create the order item
-    order_item = SupplierOrderItem(
-        supplier_order_id=order.id,  # type: ignore[arg-type]
-        product_id=product.id,  # type: ignore[arg-type]
-        quantity=order_data.quantity,
-    )
-    db.add(order_item)
-    db.commit()
-
-    # Reload with relationships
-    order = (
-        db.query(SupplierOrder)
-        .options(
-            joinedload(SupplierOrder.supplier),
-            joinedload(SupplierOrder.created_by_user),
-            joinedload(SupplierOrder.items).joinedload(SupplierOrderItem.product),
-        )
-        .filter(SupplierOrder.id == order.id)  # type: ignore[arg-type]
-        .first()
+    # create item
+    cursor.execute(
+        "INSERT INTO supplier_order_items (supplier_order_id, product_id, quantity) VALUES (%s,%s,%s)",
+        (order_id, product["id"], order_data.quantity),
     )
 
-    if not order:
-        raise HTTPException(status_code=500, detail="Failed to reload order")
-
-    return build_order_response(order)
+    # reload order + items
+    cursor.execute(
+        """
+        SELECT so.*, s.name as supplier_name, u.username as employee_username
+        FROM supplier_orders so
+        LEFT JOIN suppliers s ON so.supplier_id = s.id
+        LEFT JOIN users u ON so.employee_id = u.id
+        WHERE so.id = %s
+        """,
+        (order_id,),
+    )
+    order = cursor.fetchone()
+    cursor.execute(
+        """
+        SELECT soi.product_id, soi.quantity, p.name as product_name, p.purchase_price
+        FROM supplier_order_items soi
+        JOIN products p ON soi.product_id = p.id
+        WHERE soi.supplier_order_id = %s
+        """,
+        (order_id,),
+    )
+    items = cursor.fetchall()
+    return build_order_response(order, items)
 
 
 @router.post("/bulk", response_model=List[SupplierOrderWithItems])
 def create_bulk_supplier_order(
-    bulk_data: BulkSupplierOrderCreate, db: Session = Depends(get_db)
+    bulk_data: BulkSupplierOrderCreate, db: dict = Depends(get_db)
 ):
-    """Create supplier orders grouped by supplier"""
-    # Validate employee_id (admin user_id) if provided
+    cursor = db["cursor"]
     if bulk_data.employee_id:
-        user = db.query(User).filter(User.id == bulk_data.employee_id).first()
-        if not user:
+        cursor.execute("SELECT id FROM users WHERE id = %s", (bulk_data.employee_id,))
+        if not cursor.fetchone():
             raise HTTPException(status_code=404, detail="User not found")
 
-    # Group items by supplier
-    supplier_items: dict[int, list[tuple[Product, int]]] = {}
-
+    # group by supplier
+    supplier_items: dict[int, list[tuple[int, int]]] = {}
     for item in bulk_data.items:
-        product = (
-            db.query(Product)
-            .options(joinedload(Product.supplier))
-            .filter(Product.id == item.product_id)
-            .first()
+        cursor.execute(
+            "SELECT id, supplier_id FROM products WHERE id = %s", (item.product_id,)
         )
-        if not product:
+        p = cursor.fetchone()
+        if not p:
             continue
+        sid = int(p["supplier_id"])
+        supplier_items.setdefault(sid, []).append((p["id"], item.quantity))
 
-        sid: int = cast(int, product.supplier_id)
-        if sid not in supplier_items:
-            supplier_items[sid] = []
-        supplier_items[sid].append((product, item.quantity))
-
-    # Create one order per supplier
-    created_orders: list[Any] = []
-
-    for supplier_id, products_and_quantities in supplier_items.items():
-        order = SupplierOrder(
-            supplier_id=supplier_id,
-            employee_id=bulk_data.employee_id,
-            status=SupplierOrderStatus.PROCESSING,
+    created_order_ids = []
+    for supplier_id, items in supplier_items.items():
+        cursor.execute(
+            "INSERT INTO supplier_orders (supplier_id, employee_id, status, created_at) VALUES (%s,%s,%s,%s)",
+            (supplier_id, bulk_data.employee_id, "processing", datetime.utcnow()),
         )
-        db.add(order)
-        db.flush()
-
-        for product, quantity in products_and_quantities:
-            order_item = SupplierOrderItem(
-                supplier_order_id=order.id,  # type: ignore[arg-type]
-                product_id=product.id,  # type: ignore[arg-type]
-                quantity=quantity,
+        order_id = cursor.lastrowid
+        for pid, qty in items:
+            cursor.execute(
+                "INSERT INTO supplier_order_items (supplier_order_id, product_id, quantity) VALUES (%s,%s,%s)",
+                (order_id, pid, qty),
             )
-            db.add(order_item)
+        created_order_ids.append(order_id)
 
-        created_orders.append(order.id)
-
-    db.commit()
-
-    orders = (
-        db.query(SupplierOrder)
-        .options(
-            joinedload(SupplierOrder.supplier),
-            joinedload(SupplierOrder.created_by_user),
-            joinedload(SupplierOrder.items).joinedload(SupplierOrderItem.product),
+    # fetch created orders
+    results = []
+    for oid in created_order_ids:
+        cursor.execute(
+            """
+            SELECT so.*, s.name as supplier_name, u.username as employee_username
+            FROM supplier_orders so
+            LEFT JOIN suppliers s ON so.supplier_id = s.id
+            LEFT JOIN users u ON so.employee_id = u.id
+            WHERE so.id = %s
+            """,
+            (oid,),
         )
-        .filter(SupplierOrder.id.in_(created_orders))
-        .all()
-    )
-
-    return [build_order_response(order) for order in orders]
+        order = cursor.fetchone()
+        cursor.execute(
+            """
+            SELECT soi.product_id, soi.quantity, p.name as product_name, p.purchase_price
+            FROM supplier_order_items soi
+            JOIN products p ON soi.product_id = p.id
+            WHERE soi.supplier_order_id = %s
+            """,
+            (oid,),
+        )
+        items = cursor.fetchall()
+        results.append(build_order_response(order, items))
+    return results
 
 
 @router.put("/{order_id}/arrive")
-def mark_as_arrived(order_id: int, db: Session = Depends(get_db)):
-    """Mark a supplier order as arrived"""
-    order = db.query(SupplierOrder).filter(SupplierOrder.id == order_id).first()
-    if not order:
+def mark_as_arrived(order_id: int, db: dict = Depends(get_db)):
+    cursor = db["cursor"]
+    cursor.execute("SELECT status FROM supplier_orders WHERE id = %s", (order_id,))
+    o = cursor.fetchone()
+    if not o:
         raise HTTPException(status_code=404, detail="Supplier order not found")
-
-    current_status = cast(SupplierOrderStatus, order.status)
-    if current_status != SupplierOrderStatus.PROCESSING:
+    if o["status"] != "processing":
         raise HTTPException(status_code=400, detail="Order is not in processing state")
-
-    order.status = SupplierOrderStatus.ARRIVED  # type: ignore[assignment]
-    db.commit()
-
+    cursor.execute(
+        "UPDATE supplier_orders SET status = %s, updated_at = %s WHERE id = %s",
+        ("arrived", datetime.utcnow(), order_id),
+    )
     return {"message": "Supplier order marked as arrived"}
 
 
 @router.put("/{order_id}/complete")
-def complete_supplier_order(order_id: int, db: Session = Depends(get_db)):
-    """Complete a supplier order: add stock to products, then delete the order and its items."""
-    order = (
-        db.query(SupplierOrder)
-        .options(
-            joinedload(SupplierOrder.items).joinedload(SupplierOrderItem.product),
-        )
-        .filter(SupplierOrder.id == order_id)
-        .first()
+def complete_supplier_order(order_id: int, db: dict = Depends(get_db)):
+    cursor = db["cursor"]
+    # load order with items and product rows
+    cursor.execute(
+        """
+        SELECT soi.quantity, p.id as product_id, p.stock, p.name, p.purchase_price
+        FROM supplier_order_items soi
+        JOIN products p ON soi.product_id = p.id
+        JOIN supplier_orders so ON soi.supplier_order_id = so.id
+        WHERE so.id = %s
+        """,
+        (order_id,),
     )
-    if not order:
-        raise HTTPException(status_code=404, detail="Supplier order not found")
+    rows = cursor.fetchall()
+    if not rows:
+        raise HTTPException(
+            status_code=404, detail="Supplier order not found or has no items"
+        )
 
-    current_status = cast(SupplierOrderStatus, order.status)
-    if current_status != SupplierOrderStatus.ARRIVED:
+    # check order status
+    cursor.execute("SELECT status FROM supplier_orders WHERE id = %s", (order_id,))
+    so = cursor.fetchone()
+    if not so or so["status"] != "arrived":
         raise HTTPException(
             status_code=400, detail="Order must be marked as arrived first"
         )
 
     stock_updates = []
-    for item in order.items:
-        item.product.stock += item.quantity  # type: ignore[operator]
+    for item in rows:
+        new_stock = (item["stock"] or 0) + item["quantity"]
+        cursor.execute(
+            "UPDATE products SET stock = %s WHERE id = %s",
+            (new_stock, item["product_id"]),
+        )
         stock_updates.append(
             {
-                "product_name": item.product.name,
-                "quantity_added": item.quantity,
-                "new_stock": item.product.stock,
+                "product_name": item["name"],
+                "quantity_added": item["quantity"],
+                "new_stock": new_stock,
             }
         )
 
-    order.status = SupplierOrderStatus.COMPLETED  # type: ignore[assignment]
-    order.completed_at = datetime.utcnow()  # type: ignore[assignment]
-
-    db.delete(order)
-    db.commit()
+    # mark completed and remove order and its items
+    cursor.execute(
+        "DELETE FROM supplier_order_items WHERE supplier_order_id = %s", (order_id,)
+    )
+    cursor.execute("DELETE FROM supplier_orders WHERE id = %s", (order_id,))
 
     return {
         "message": f"Order completed and removed. Updated stock for {len(stock_updates)} products.",
@@ -322,17 +351,16 @@ def complete_supplier_order(order_id: int, db: Session = Depends(get_db)):
 
 
 @router.delete("/{order_id}")
-def cancel_supplier_order(order_id: int, db: Session = Depends(get_db)):
-    """Cancel/delete a supplier order (only if not completed)"""
-    order = db.query(SupplierOrder).filter(SupplierOrder.id == order_id).first()
-    if not order:
+def cancel_supplier_order(order_id: int, db: dict = Depends(get_db)):
+    cursor = db["cursor"]
+    cursor.execute("SELECT status FROM supplier_orders WHERE id = %s", (order_id,))
+    o = cursor.fetchone()
+    if not o:
         raise HTTPException(status_code=404, detail="Supplier order not found")
-
-    current_status = cast(SupplierOrderStatus, order.status)
-    if current_status == SupplierOrderStatus.COMPLETED:
+    if o["status"] == "completed":
         raise HTTPException(status_code=400, detail="Cannot cancel a completed order")
-
-    db.delete(order)
-    db.commit()
-
+    cursor.execute(
+        "DELETE FROM supplier_order_items WHERE supplier_order_id = %s", (order_id,)
+    )
+    cursor.execute("DELETE FROM supplier_orders WHERE id = %s", (order_id,))
     return {"message": "Supplier order cancelled"}
