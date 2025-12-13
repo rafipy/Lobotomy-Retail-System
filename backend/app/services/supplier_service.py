@@ -246,7 +246,7 @@ def get_all_suppliers(db: dict) -> List[dict]:
 
 def get_active_suppliers(db: dict) -> List[dict]:
     cursor = db["cursor"]
-    cursor.execute("SELECT id, code, name FROM suppliers ORDER BY code")
+    cursor.execute("SELECT id, code, name, full_name FROM suppliers ORDER BY code")
     return cursor.fetchall()
 
 

@@ -4,22 +4,32 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
-from app.database import Base, engine
-from app.models import Customer, Product, Supplier, User
-from app.routers import auth, products, supplier, supplier_orders
+from app.database import init_db
+from app.routers import (
+    auth,
+    customer_orders,
+    payments,
+    products,
+    supplier,
+    supplier_orders,
+)
 
 load_dotenv()
 
 app = FastAPI(title="Retail DBMS API")
 
-Base.metadata.create_all(bind=engine)
+# Initialize database tables
+init_db()
 
+# Seed the database with initial data
 try:
     from app.seed import seed_database
 
     seed_database()
 except ImportError:
     print("No seed file found, skipping database seeding")
+except Exception as e:
+    print(f"Error during database seeding: {e}")
 
 
 # Custom exception handler for Pydantic validation errors
@@ -45,6 +55,8 @@ app.include_router(auth.router)
 app.include_router(products.router)
 app.include_router(supplier.router)
 app.include_router(supplier_orders.router)
+app.include_router(customer_orders.router)
+app.include_router(payments.router)
 
 
 @app.get("/")

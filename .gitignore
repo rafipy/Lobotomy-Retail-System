@@ -7,3 +7,5 @@ backend/venv
 backend/uv.lock
 backend/pyproject.toml
 backend/uv.lock
+backend/test_imports.py
+backend/test_api.py
