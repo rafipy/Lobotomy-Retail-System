@@ -24,61 +24,69 @@ export function CustomerHeader({ username, onMenuClick }: CustomerHeaderProps) {
     clearAuth();
     router.push("/");
   };
-  
+
   const totalItems = getTotalItems();
 
   return (
-    <header className="border-b-4 border-teal-500 bg-black/80 backdrop-blur-sm sticky top-0 z-30 w-full animate-fade-in">
-      <div className="w-full px-6 py-4">
-        <div className="flex justify-between items-center">
-          <div className="flex items-c gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onMenuClick}
-              className="text-teal-200 hover:bg-transparent border-2 hover:text-white border-teal-500/50 hover:border-teal-400"
-            >
-              <Menu className="h-6 w-6" />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-heading font-bold text-teal-200">
-                Welcome to L. Corp Store
-              </h1>
-              <p className="text-gray-400 font-body mt-1">
-                Hello,{" "}
-                <span className="text-teal-400 font-semibold">{username}</span>
-              </p>
-            </div>
-          </div>
-        </div>
-          <div className="flex justify-end items-center gap-3 relative">
-                   {/* Cart Button */}
-                   <Button
-                     onClick={() => setIsCartOpen(!isCartOpen)}
-                     className="bg-teal-700 hover:bg-teal-900 text-white font-bold relative"
-                   >
-                     <ShoppingCart className="h-5 w-5" />
-                     {totalItems > 0 && (
-                       <span className="absolute -top-2 -right-2 bg-yellow-400 text-black text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                         {totalItems}
-                       </span>
-                     )}
-                   </Button>
-       
-                   {/* Cart Dropdown */}
-                   <CartDropdown isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
-          <Button
-            onClick={handleLogout}
-            className="bg-teal-700 hover:bg-teal-900 text-white font-bold"
-          >
-            <LogOut className="mr-2 h-4 w-4" />
-            Logout
-          </Button>
-        </div>
-      </div>
-    </header>
-  );
-}
+     <header className="border-b-4 border-teal-500 bg-black/80 backdrop-blur-sm sticky top-0 z-30 w-full animate-fade-in">
+       <div className="w-full px-6 py-4">
+         <div className="flex justify-between items-center">
+           {/* Left Side - Menu Button and Title */}
+           <div className="flex items-center gap-4">
+             <Button
+               variant="ghost"
+               size="icon"
+               onClick={onMenuClick}
+               className="text-teal-200 hover:bg-transparent border-2 hover:text-white border-teal-500/50 hover:border-teal-400"
+             >
+               <Menu className="h-6 w-6" />
+             </Button>
+             <div>
+               <h1 className="text-3xl font-heading font-bold text-teal-200">
+                 Welcome to L. Corp Store
+               </h1>
+               <p className="text-gray-400 font-body mt-1">
+                 Hello,{" "}
+                 <span className="text-teal-400 font-semibold">{username}</span>
+               </p>
+             </div>
+           </div>
+ 
+           {/* Right Side - Cart and Logout Buttons */}
+           <div className="flex items-center gap-3 relative">
+             {/* Cart Button */}
+             <Button
+               onClick={() => setIsCartOpen(!isCartOpen)}
+               className="bg-teal-700 hover:bg-teal-900 text-white font-bold relative"
+             >
+               <ShoppingCart className="h-5 w-5" />
+               {totalItems > 0 && (
+                 <span className="absolute -top-2 -right-2 bg-yellow-400 text-black text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                   {totalItems}
+                 </span>
+               )}
+             </Button>
+ 
+             {/* Cart Dropdown */}
+             <CartDropdown
+               isOpen={isCartOpen}
+               onClose={() => setIsCartOpen(false)}
+             />
+ 
+             {/* Logout Button */}
+             <Button
+               onClick={handleLogout}
+               className="bg-teal-700 hover:bg-teal-900 text-white font-bold"
+             >
+               <LogOut className="mr-2 h-4 w-4" />
+               Logout
+             </Button>
+           </div>
+         </div>
+       </div>
+     </header>
+   );
+ }
 
 function CustomerItemGallery() {
   const [products, setProducts] = useState<Product[]>([]);
