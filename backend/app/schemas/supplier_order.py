@@ -53,8 +53,8 @@ class SupplierOrderResponse(BaseModel):
     status: SupplierOrderStatus
     total_cost: float
     items: list[SupplierOrderItemResponse]
-    created_at: datetime
-    updated_at: datetime
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
 
     class Config:
@@ -72,7 +72,7 @@ class SupplierOrderListResponse(BaseModel):
     status: SupplierOrderStatus
     total_cost: float
     item_count: int
-    created_at: datetime
+    created_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
 
     class Config:
@@ -90,7 +90,7 @@ class SupplierOrderWithItems(BaseModel):
     status: SupplierOrderStatus
     total_cost: float
     items: list[SupplierOrderItemResponse]
-    created_at: datetime
+    created_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
 
     class Config:

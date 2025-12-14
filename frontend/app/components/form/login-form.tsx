@@ -14,36 +14,52 @@ import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-const DUMMY_USERS = [
-  { username: "admin", password: "password123" },
-  { username: "customer1", password: "test1234" },
-  { username: "demo", password: "demo1234" },
-];
 
 export function LoginForm() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
 
-    const user = DUMMY_USERS.find(
-      (u) => u.username === username && u.password === password,
-    );
+    try {
+      const response = await fetch("http://localhost:8000/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, password }),
+      });
 
-    if (user) {
-      console.log("Login successful:", username);
-      router.push("/dashboard");
-    } else {
-      alert("Invalid username or password");
+      if (!response.ok) {
+        const error = await response.json();
+        alert(error.detail || "Login failed");
+        setLoading(false);
+        return;
+      }
+
+      const data = await response.json();
+
+
+      localStorage.setItem("token", data.access_token);
+      localStorage.setItem("role", data.role);
+      localStorage.setItem("username", data.username);
+      localStorage.setItem("user_id", data.user_id.toString());
+
+      router.push("/customer/dashboard");
+    } catch (error) {
+      console.error("Login error:", error);
+      alert("An error occurred during login");
+      setLoading(false);
     }
   };
 
   const handleBack = () => {
-    window.history.back();
+    router.push("/");
   };
-
   return (
     <div className="w-full max-w-md animate-fade-in">
       <form onSubmit={handleSubmit}>

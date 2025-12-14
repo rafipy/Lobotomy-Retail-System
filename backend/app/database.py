@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from typing import Generator
 from urllib.parse import urlparse
 
@@ -23,10 +24,10 @@ def parse_database_url(url: str) -> dict:
     }
 
 
+db_config = parse_database_url(DATABASE_URL)
+
+
 def get_connection():
-    """
-    Return a new pymysql connection. Caller is responsible for closing.
-    """
     return pymysql.connect(
         host=db_config["host"],
         port=int(db_config["port"]),
@@ -39,9 +40,6 @@ def get_connection():
     )
 
 
-db_config = parse_database_url(DATABASE_URL)
-
-
 def get_db() -> Generator[dict, None, None]:
     conn = get_connection()
     cursor = conn.cursor()
@@ -50,6 +48,28 @@ def get_db() -> Generator[dict, None, None]:
         conn.commit()
     except Exception:
         conn.rollback()
+        raise
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def init_db():
+    sql_file = Path(__file__).parent / "create_tables.sql"
+    with open(sql_file, "r") as f:
+        sql_content = f.read()
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        statements = [s.strip() for s in sql_content.split(";") if s.strip()]
+        for statement in statements:
+            cursor.execute(statement)
+        conn.commit()
+        print("Database tables initialized successfully.")
+    except Exception as e:
+        conn.rollback()
+        print(f"Error initializing database: {e}")
         raise
     finally:
         cursor.close()
