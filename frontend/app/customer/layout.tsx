@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { getAuthData } from "@/lib/auth";
-import { AdminHeader } from "@/app/components/layout/admin-header";
-import { AdminSidebar } from "@/app/components/layout/admin-sidebar";
+import { CustomerHeader } from "@/app/components/dashboard/customer-home";
+import { CartProvider } from "@/app/components/dashboard/cart";
+import { CustomerSidebar } from "@/app/components/layout/customer-sidebar";
 import { usePathname } from "next/navigation";
 
 interface CustomerLayoutProps {
@@ -24,21 +25,23 @@ export default function CustomerLayout({ children }: CustomerLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-b from-black to-teal-950">
-      <AdminSidebar
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-      />
-
-      <div className="w-full">
-        <AdminHeader
-          username={username}
-          onMenuClick={() => setIsSidebarOpen(true)}
+    <CartProvider>
+      <div className="min-h-screen bg-linear-to-b from-black to-teal-950">
+        <CustomerSidebar
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
         />
-
-        {/* Page content goes here */}
-        <main className="w-full">{children}</main>
+ 
+        <div className="w-full">
+          <CustomerHeader
+            username={username}
+            onMenuClick={() => setIsSidebarOpen(true)}
+          />
+ 
+          {/* Page content goes here */}
+          <main className="w-full">{children}</main>
+        </div>
       </div>
-    </div>
+    </CartProvider>
   );
 }

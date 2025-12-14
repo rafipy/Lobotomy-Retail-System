@@ -2,18 +2,52 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { getProducts, Product } from "@/lib/api/products";
-import { Loader2, ShoppingCart } from "lucide-react";
-import { getStockStatus } from "@/lib/stock-status";
+import { Loader2, ShoppingCart, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useCart } from "./customer-home";
+import { useCart } from "@/app/components/dashboard/cart";
+import { setCheckoutItems } from "@/lib/api/checkout";
 
-export function CustomerItemGallery() {
+interface CustomerItemGalleryProps {
+  searchQuery?: string;
+}
+
+export function CustomerItemGallery({ searchQuery = "" }: CustomerItemGalleryProps) {
+  const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const { addToCart } = useCart();
+  
+  function getCustomerStockStatus(stock: number) {
+    if (stock === 0) {
+      return {
+        text: "OUT OF STOCK",
+        className: "text-red-500 bg-red-950/50 border-red-600",
+      };
+    } else if (stock < 50) {
+      return {
+        text: "ALMOST OUT OF STOCK",
+        className: "text-yellow-400 bg-yellow-950/50 border-yellow-600",
+      };
+    } else {
+      return {
+        text: "IN STOCK",
+        className: "text-teal-400 bg-teal-950/50 border-teal-600",
+      };
+    }
+  }
+
+  // Handle Buy Now - goes directly to checkout with single item
+  const handleBuyNow = (product: Product) => {
+    // Set checkout items with just this one product
+    setCheckoutItems([{ product, quantity: 1 }]);
+    // Flag that this checkout is NOT from cart (single item purchase)
+    localStorage.setItem("checkout_from_cart", "false");
+    router.push("/customer/checkout");
+  };
 
   useEffect(() => {
     async function fetchProducts() {
@@ -36,10 +70,15 @@ export function CustomerItemGallery() {
   // Extract unique categories
   const categories = ["All", ...new Set(products.map((item) => item.category))];
 
-  const filteredItems =
-    selectedCategory === "All"
-      ? products
-      : products.filter((item) => item.category === selectedCategory);
+  // Filter by category and search query
+  const filteredItems = products.filter((item) => {
+    const matchesCategory = selectedCategory === "All" || item.category === selectedCategory;
+    const matchesSearch = searchQuery === "" || 
+      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.category.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
 
   if (loading) {
     return (
@@ -60,6 +99,13 @@ export function CustomerItemGallery() {
 
   return (
     <div className="w-full animate-fade-in">
+      {/* Search Results Count */}
+      {searchQuery && (
+        <p className="mb-4 text-sm text-gray-400">
+          Found {filteredItems.length} result{filteredItems.length !== 1 ? "s" : ""} for "{searchQuery}"
+        </p>
+      )}
+
       {/* Category Filter */}
       <div className="mb-8 flex flex-wrap gap-3">
         {categories.map((category) => (
@@ -80,7 +126,7 @@ export function CustomerItemGallery() {
       {/* Items Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {filteredItems.map((item) => {
-          const stockStatus = getStockStatus(item.stock);
+          const stockStatus = getCustomerStockStatus(item.stock);
           const isOutOfStock = item.stock === 0;
 
           return (
@@ -138,19 +184,34 @@ export function CustomerItemGallery() {
                     {stockStatus.text}
                   </div>
 
-                  {/* Add to Cart Button */}
-                  <Button
-                    onClick={() => addToCart(item)}
-                    disabled={isOutOfStock}
-                    className={`w-full font-bold ${
-                      isOutOfStock
-                        ? "bg-gray-600 text-gray-400 cursor-not-allowed"
-                        : "bg-yellow-500 hover:bg-yellow-600 text-black"
-                    }`}
-                  >
-                    <ShoppingCart className="mr-2 h-4 w-4" />
-                    {isOutOfStock ? "Out of Stock" : "Add to Cart"}
-                  </Button>
+                  {/* Add to Cart Button and Buy Now button */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      onClick={() => addToCart(item)}
+                      disabled={isOutOfStock}
+                      className={`font-bold text-sm py-2 ${
+                        isOutOfStock
+                          ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+                          : "bg-yellow-500 hover:bg-yellow-600 text-black"
+                      }`}
+                    >
+                      <ShoppingCart className="mr-1 h-4 w-4" />
+                      Add to Cart
+                    </Button>
+
+                    <Button
+                      onClick={() => handleBuyNow(item)}
+                      disabled={isOutOfStock}
+                      className={`font-bold text-sm py-2 ${
+                        isOutOfStock
+                          ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+                          : "bg-teal-600 hover:bg-teal-700 text-white"
+                      }`}
+                    >
+                      <Zap className="mr-1 h-4 w-4" />
+                      Buy Now
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -161,7 +222,11 @@ export function CustomerItemGallery() {
       {/* Empty State */}
       {filteredItems.length === 0 && (
         <div className="text-center py-16 text-gray-400">
-          <p className="text-xl font-body">No items found in this category.</p>
+          <p className="text-xl font-body">
+            {searchQuery 
+              ? `No products found matching "${searchQuery}"`
+              : "No items found in this category."}
+          </p>
         </div>
       )}
     </div>
