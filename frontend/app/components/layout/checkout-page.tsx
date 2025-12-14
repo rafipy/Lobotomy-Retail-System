@@ -88,6 +88,18 @@ interface ValidationErrors {
   accountNumber?: string;
 }
 
+// Helper function to get customer ID from localStorage
+function getCustomerId(): number | null {
+  if (typeof window === "undefined") return null;
+  const userId = localStorage.getItem("user_id");
+  return userId ? parseInt(userId) : null;
+}
+
+// Helper function to get auth token
+function getAuthToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("token");
+}
 // ============================================
 // MAIN CHECKOUT PAGE COMPONENT
 // ============================================
@@ -288,21 +300,94 @@ export function CheckoutPage() {
       return;
     }
 
+    const customerId = getCustomerId();
+    if (!customerId) {
+      alert("Please log in to place an order");
+      router.push("/login");
+      return;
+    }
+
     setIsProcessing(true);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Step 1: Create customer order
+      const orderResponse = await fetch("http://localhost:8000/customer-orders/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          customer_id: customerId,
+          items: items.map((item) => ({
+            product_id: item.product.id,
+            quantity: item.quantity,
+          })),
+          notes: orderNotes || null,
+        }),
+      });
 
-      const mockOrderId = `ORD-${Date.now()}-${Math.random().toString(36).substring(7).toUpperCase()}`;
-      const mockTransactionId = `TXN-${Date.now()}-${Math.random().toString(36).substring(7).toUpperCase()}`;
+      if (!orderResponse.ok) {
+        const errorData = await orderResponse.json();
+        throw new Error(errorData.detail || "Failed to create order");
+      }
 
-      setOrderId(mockOrderId);
-      setTransactionId(mockTransactionId);
+      const order = await orderResponse.json();
+      console.log("Order created:", order);
+
+      // Step 2: Create payment record
+      // Map frontend payment method to backend enum values
+      let backendPaymentMethod = selectedPaymentMethod;
+      if (selectedPaymentMethod === "cash") {
+        backendPaymentMethod = "cash";
+      }
+
+      const transactionRef = `TXN-${Date.now()}-${Math.random().toString(36).substring(7).toUpperCase()}`;
+
+      const paymentResponse = await fetch("http://localhost:8000/payments/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          customer_order_id: order.id,
+          amount: total,
+          payment_method: backendPaymentMethod,
+          transaction_reference: transactionRef,
+        }),
+      });
+
+      if (!paymentResponse.ok) {
+        const errorData = await paymentResponse.json();
+        throw new Error(errorData.detail || "Failed to create payment");
+      }
+
+      const payment = await paymentResponse.json();
+      console.log("Payment created:", payment);
+
+      // Step 3: Complete the payment (mark as completed)
+      const completeResponse = await fetch(
+        `http://localhost:8000/payments/${payment.id}/complete`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (completeResponse.ok) {
+        console.log("Payment marked as completed");
+      }
+
+      // Success! Set order details
+      setOrderId(order.id.toString());
+      setTransactionId(payment.transaction_reference);
       setOrderComplete(true);
 
+      // Clear checkout items
       clearCheckoutItems();
-      
-      // Remove only the checked out items from cart (not the entire cart)
+
+      // Remove items from cart if checkout was from cart
       if (isFromCart) {
         const selectedIdsJson = localStorage.getItem("checkout_selected_ids");
         if (selectedIdsJson) {
@@ -311,17 +396,19 @@ export function CheckoutPage() {
           localStorage.removeItem("checkout_selected_ids");
         }
       }
-      
+
       localStorage.removeItem("checkout_from_cart");
     } catch (error) {
       console.error("Order failed:", error);
-      alert("Failed to place order. Please try again.");
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Failed to place order. Please try again."
+      );
     } finally {
       setIsProcessing(false);
     }
   };
-
-
   // Order Success Screen
   if (orderComplete) {
     return (
