@@ -421,7 +421,7 @@ export default function SettingsPage() {
             </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-gray-300 flex items-center gap-2">
+                  <Label className=" text-gray-300 flex items-center gap-2">
                     <User className="h-4 w-4" />
                     First Name
                   </Label>
