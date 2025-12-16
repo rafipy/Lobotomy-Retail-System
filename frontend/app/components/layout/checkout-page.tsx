@@ -291,17 +291,57 @@ export function CheckoutPage() {
     setIsProcessing(true);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Get user_id and customer data
+      const userId = localStorage.getItem("user_id");
+      if (!userId) {
+        throw new Error("User not logged in");
+      }
 
-      const mockOrderId = `ORD-${Date.now()}-${Math.random().toString(36).substring(7).toUpperCase()}`;
-      const mockTransactionId = `TXN-${Date.now()}-${Math.random().toString(36).substring(7).toUpperCase()}`;
+      // Get customer_id from user_id
+      const { getCustomerByUserId } = await import("@/lib/api/customers");
+      const customer = await getCustomerByUserId(parseInt(userId));
 
-      setOrderId(mockOrderId);
-      setTransactionId(mockTransactionId);
+      // Create the order
+      const { createCustomerOrder } = await import("@/lib/api/customer-orders");
+      const orderData = {
+        customer_id: customer.id,
+        items: items.map((item) => ({
+          product_id: item.product.id,
+          quantity: item.quantity,
+        })),
+        notes: orderNotes || undefined,
+      };
+
+      const createdOrder = await createCustomerOrder(orderData);
+
+      // Create the payment
+      const { createPayment } = await import("@/lib/api/payments");
+      const paymentData = {
+        customer_order_id: createdOrder.id,
+        amount: total,
+        payment_method: selectedPaymentMethod,
+        transaction_reference:
+          selectedPaymentMethod === "bank_transfer"
+            ? `BANK-${bankName}-${accountNumber.slice(-4)}`
+            : selectedPaymentMethod === "e_wallet"
+              ? `${walletType.toUpperCase()}-${walletId}`
+              : undefined,
+      };
+
+      const createdPayment = await createPayment(paymentData);
+
+      // Auto-complete payment for cash method
+      if (selectedPaymentMethod === "cash") {
+        const { completePayment } = await import("@/lib/api/payments");
+        await completePayment(createdPayment.id);
+      }
+
+      setOrderId(`ORD-${createdOrder.id}`);
+      setTransactionId(`TXN-${createdPayment.id}`);
       setOrderComplete(true);
 
       clearCheckoutItems();
-      
+
       // Remove only the checked out items from cart (not the entire cart)
       if (isFromCart) {
         const selectedIdsJson = localStorage.getItem("checkout_selected_ids");
@@ -311,16 +351,19 @@ export function CheckoutPage() {
           localStorage.removeItem("checkout_selected_ids");
         }
       }
-      
+
       localStorage.removeItem("checkout_from_cart");
     } catch (error) {
       console.error("Order failed:", error);
-      alert("Failed to place order. Please try again.");
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Failed to place order. Please try again.",
+      );
     } finally {
       setIsProcessing(false);
     }
   };
-
 
   // Order Success Screen
   if (orderComplete) {
@@ -376,7 +419,9 @@ export function CheckoutPage() {
             <div className="text-sm space-y-2">
               <div className="flex justify-between">
                 <span className="text-gray-400">Name:</span>
-                <span className="text-white font-semibold">{shippingAddress.fullName}</span>
+                <span className="text-white font-semibold">
+                  {shippingAddress.fullName}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">Address:</span>
@@ -408,7 +453,6 @@ export function CheckoutPage() {
               </div>
             </div>
           </div>
-
 
           <div className="bg-teal-900/30 border border-teal-600/50 rounded-lg p-4 mb-6">
             <p className="text-teal-200 text-sm">
