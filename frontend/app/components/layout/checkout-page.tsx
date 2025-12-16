@@ -318,6 +318,7 @@ export function CheckoutPage() {
         },
         body: JSON.stringify({
           customer_id: customerId,
+          employee_id: null,
           items: items.map((item) => ({
             product_id: item.product.id,
             quantity: item.quantity,
@@ -374,15 +375,23 @@ export function CheckoutPage() {
           },
         }
       );
+      
+      let completedPaymentId = null;
 
       if (completeResponse.ok) {
+        const completeData = await completeResponse.json();
+        completedPaymentId = completeData.payment_id;
         console.log("Payment marked as completed");
+      } else {
+        const errBody = await completeResponse.json().catch(() => null);
+        throw new Error(errBody?.detail || "Failed to complete payment");
       }
 
       // Success! Set order details
       setOrderId(order.id.toString());
-      setTransactionId(payment.transaction_reference);
+      setTransactionId(completedPaymentId);
       setOrderComplete(true);
+      
 
       // Clear checkout items
       clearCheckoutItems();
