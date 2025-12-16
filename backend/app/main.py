@@ -12,6 +12,7 @@ from app.routers import (
     products,
     supplier,
     supplier_orders,
+    users
 )
 
 load_dotenv()
@@ -57,6 +58,7 @@ app.include_router(supplier.router)
 app.include_router(supplier_orders.router)
 app.include_router(customer_orders.router)
 app.include_router(payments.router)
+app.include_router(users.router)
 
 
 @app.get("/")
