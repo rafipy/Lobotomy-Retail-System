@@ -62,6 +62,7 @@ app.include_router(customer_orders.router)
 app.include_router(payments.router)
 app.include_router(customers.router)
 app.include_router(employees.router)
+app.include_router(users.router)
 
 
 @app.get("/")
