@@ -14,7 +14,7 @@ export default function CustomerDashboard() {
   };
 
   return (
-    <AuthRedirect requiredRole="CUSTOMER">
+    <AuthRedirect requiredRole="customer">
       <div className="w-full max-w-7xl mx-auto px-6 py-8 animate-fade-in">
         <div className="bg-black/40 border-2 border-teal-500 rounded-xl p-6 backdrop-blur-sm">
           <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

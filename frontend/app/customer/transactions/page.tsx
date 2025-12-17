@@ -3,7 +3,7 @@ import { TransactionHistory } from "@/app/components/transactions/transaction-hi
 
 export default function CustomerTransactionsPage() {
   return (
-    <AuthRedirect requiredRole="CUSTOMER">
+    <AuthRedirect requiredRole="customer">
       <TransactionHistory />
     </AuthRedirect>
   );

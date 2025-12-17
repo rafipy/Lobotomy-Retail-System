@@ -1,10 +1,10 @@
 import { AuthRedirect } from "@/app/components/auth/auth-redirect";
-import SettingsPage from "@/app/components/settings/user-settings";
+import { EmployeeSettings } from "@/app/components/settings/employee-settings";
 
 export default function AdminSettingsPage() {
   return (
     <AuthRedirect requiredRole="admin">
-      <SettingsPage />
+      <EmployeeSettings />
     </AuthRedirect>
   );
 }

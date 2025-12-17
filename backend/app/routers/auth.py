@@ -76,8 +76,8 @@ def register_customer(register_data: CustomerRegister, db: dict = Depends(get_db
     cursor.execute(
         """
         INSERT INTO customers
-        (first_name, last_name, email, phone_number, address, city, postal_code, birth_date, user_id)
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        (first_name, last_name, email, phone_number, address, city, postal_code, user_id)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
         """,
         (
             register_data.first_name,

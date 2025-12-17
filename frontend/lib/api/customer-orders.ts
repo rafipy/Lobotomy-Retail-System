@@ -26,6 +26,10 @@ export interface CustomerOrder {
   items: CustomerOrderItem[];
   created_at: string;
   completed_at: string | null;
+  // Shipping address from customer profile
+  shipping_address: string | null;
+  shipping_city: string | null;
+  shipping_postal_code: string | null;
 }
 
 export interface CustomerOrderListItem {

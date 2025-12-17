@@ -132,7 +132,7 @@ export function AdminSidebar({ isOpen, onClose }: SidebarProps) {
                   transition-all duration-200
                   ${
                     active
-                      ? "bg-red-700 text-white border-2 border-teal-400 shadow-lg shadow-red-500/50"
+                      ? "bg-red-700 text-white border-2 border-red-400 shadow-lg shadow-red-500/50"
                       : "text-gray-300 hover:bg-red-900/50 hover:text-teal-200 border-2 border-transparent"
                   }
                   ${isCollapsed ? "justify-center" : ""}

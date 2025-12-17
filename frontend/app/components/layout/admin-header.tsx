@@ -27,7 +27,7 @@ export function AdminHeader({ username, onMenuClick }: HeaderProps) {
               variant="ghost"
               size="icon"
               onClick={onMenuClick}
-              className="text-teal-200 hover:bg-transparent border-2 hover:text-white border-teal-500/50 hover:border-teal-400"
+              className="text-teal-200 hover:bg-transparent border-2 hover:text-white border-red-500/50 hover:border-red-400"
             >
               <Menu className="h-6 w-6" />
             </Button>

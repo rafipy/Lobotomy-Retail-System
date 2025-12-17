@@ -87,6 +87,10 @@ class CustomerOrderWithItems(BaseModel):
     items: list[CustomerOrderItemResponse]
     created_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
+    # Shipping address from customer profile
+    shipping_address: Optional[str] = None
+    shipping_city: Optional[str] = None
+    shipping_postal_code: Optional[str] = None
 
     class Config:
         from_attributes = True

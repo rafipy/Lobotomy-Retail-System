@@ -1,10 +1,7 @@
 "use client";
 
-import  SettingsPage  from "@/app/components/settings/user-settings";
+import { CustomerSettings } from "@/app/components/settings/customer-settings";
 
 export default function CustomerSettingsPage() {
-  return (
-      <SettingsPage/>
-    
-  );
+  return <CustomerSettings />;
 }

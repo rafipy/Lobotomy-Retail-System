@@ -46,7 +46,7 @@ const STATUS_CONFIG: Record<
   completed: {
     label: "Completed",
     icon: <CheckCircle2 className="h-4 w-4" />,
-    className: "bg-teal-900/30 text-teal-400 border-teal-600",
+    className: "bg-green-900/30 text-green-400 border-green-600",
   },
   cancelled: {
     label: "Cancelled",
@@ -200,7 +200,7 @@ export function AdminOrdersSection() {
   if (orders.length === 0) {
     return (
       <div className="w-full max-w-6xl mx-auto px-6 py-12 animate-fade-in">
-        <div className="bg-black/60 border-2 border-teal-500 rounded-xl p-8 backdrop-blur-sm text-center">
+        <div className="bg-black/60 border-2 border-red-500 rounded-xl p-8 backdrop-blur-sm text-center">
           <Package className="h-16 w-16 mx-auto mb-4 text-gray-500" />
           <h2 className="text-xl font-heading text-gray-400">
             No Pending Orders
@@ -213,7 +213,7 @@ export function AdminOrdersSection() {
 
   return (
     <div className="w-full max-w-6xl mx-auto px-6 py-8 animate-fade-in">
-      <div className="bg-black/40 border-2 border-teal-500 rounded-xl p-6 backdrop-blur-sm">
+      <div className="bg-black/40 border-2 border-red-500 rounded-xl p-6 backdrop-blur-sm">
         <div className="mb-6">
           <h2 className="text-2xl font-heading font-bold text-teal-200 mb-2 flex items-center gap-2">
             <Package className="h-6 w-6" />
@@ -285,7 +285,7 @@ export function AdminOrdersSection() {
                       variant="ghost"
                       size="sm"
                       onClick={() => toggleExpanded(order.id)}
-                      className="text-gray-400 hover:bg-teal-900/30"
+                      className="text-gray-400 hover:bg-red-900/30"
                     >
                       {isExpanded ? (
                         <ChevronUp className="h-4 w-4" />
@@ -318,7 +318,7 @@ export function AdminOrdersSection() {
                         size="sm"
                         onClick={() => handleCompleteOrder(order.id)}
                         disabled={isProcessingAction}
-                        className="bg-teal-600 hover:bg-teal-700 text-white border border-teal-400"
+                        className="bg-green-600 hover:bg-green-700 text-white border border-green-400"
                       >
                         {isProcessingAction ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -390,13 +390,39 @@ export function AdminOrdersSection() {
                         </table>
                       </div>
 
+                      {/* Shipping Address */}
+                      {(order.shipping_address ||
+                        order.shipping_city ||
+                        order.shipping_postal_code) && (
+                        <div>
+                          <h4 className="text-sm font-semibold text-teal-200 mb-2">
+                            Shipping Address
+                          </h4>
+                          <div className="text-gray-300 text-sm bg-black/40 p-3 rounded-lg border border-red-500/20">
+                            {order.shipping_address && (
+                              <p>{order.shipping_address}</p>
+                            )}
+                            {(order.shipping_city ||
+                              order.shipping_postal_code) && (
+                              <p>
+                                {order.shipping_city}
+                                {order.shipping_city &&
+                                  order.shipping_postal_code &&
+                                  ", "}
+                                {order.shipping_postal_code}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Notes */}
                       {order.notes && (
                         <div>
                           <h4 className="text-sm font-semibold text-teal-200 mb-2">
                             Order Notes
                           </h4>
-                          <p className="text-gray-300 text-sm bg-black/40 p-3 rounded-lg border border-teal-500/20">
+                          <p className="text-gray-300 text-sm bg-black/40 p-3 rounded-lg border border-red-500/20">
                             {order.notes}
                           </p>
                         </div>

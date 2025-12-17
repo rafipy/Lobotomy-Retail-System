@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { getAuthData } from "@/lib/auth";
 import { AdminHeader } from "@/app/components/layout/admin-header";
 import { AdminSidebar } from "@/app/components/layout/admin-sidebar";
@@ -13,11 +13,14 @@ interface AdminLayoutProps {
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [username, setUsername] = useState<string>("");
 
-  const [username] = useState<string>(() => {
+  useEffect(() => {
     const authData = getAuthData();
-    return authData?.username || "";
-  });
+    if (authData?.username) {
+      setUsername(authData.username);
+    }
+  }, []);
 
   if (pathname === "/admin") {
     return <>{children}</>;

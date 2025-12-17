@@ -39,6 +39,9 @@ def build_order_response(order_row: dict, items: list[dict]) -> CustomerOrderWit
             "items": item_responses,
             "created_at": order_row.get("created_at"),
             "completed_at": order_row.get("completed_at"),
+            "shipping_address": order_row.get("shipping_address"),
+            "shipping_city": order_row.get("shipping_city"),
+            "shipping_postal_code": order_row.get("shipping_postal_code"),
         }
     )
 
@@ -147,7 +150,10 @@ def get_pending_customer_orders(db: dict) -> List[CustomerOrderWithItems]:
         """
         SELECT co.*,
                CONCAT(c.first_name, ' ', c.last_name) as customer_name,
-               u.username as employee_username
+               u.username as employee_username,
+               c.address as shipping_address,
+               c.city as shipping_city,
+               c.postal_code as shipping_postal_code
         FROM customer_orders co
         LEFT JOIN customers c ON co.customer_id = c.id
         LEFT JOIN users u ON co.employee_id = u.id
@@ -180,7 +186,10 @@ def get_customer_order(db: dict, order_id: int) -> Optional[CustomerOrderWithIte
         """
         SELECT co.*,
                CONCAT(c.first_name, ' ', c.last_name) as customer_name,
-               u.username as employee_username
+               u.username as employee_username,
+               c.address as shipping_address,
+               c.city as shipping_city,
+               c.postal_code as shipping_postal_code
         FROM customer_orders co
         LEFT JOIN customers c ON co.customer_id = c.id
         LEFT JOIN users u ON co.employee_id = u.id
