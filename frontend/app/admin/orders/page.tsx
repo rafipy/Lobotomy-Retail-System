@@ -3,7 +3,7 @@ import { AdminOrdersSection } from "@/app/components/orders/admin-orders-section
 
 export default function AdminOrdersPage() {
   return (
-    <AuthRedirect requiredRole="ADMIN">
+    <AuthRedirect requiredRole="admin">
       <AdminOrdersSection />
     </AuthRedirect>
   );
