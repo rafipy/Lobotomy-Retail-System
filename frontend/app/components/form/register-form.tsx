@@ -254,64 +254,6 @@ export function RegisterForm() {
                 </Field>
               </div>
 
-              <Field>
-                <FieldLabel className="text-white font-semibold">
-                  Date of Birth <span className="text-red-500">*</span>
-                </FieldLabel>
-                <div className="flex flex-row gap-2 ">
-                  <Select value={day} onValueChange={setDay} disabled={loading}>
-                    <SelectTrigger
-                      className={`bg-black/50 border-2 border-teal-500 ${day ? "text-white" : "text-gray-400"}`}
-                    >
-                      <SelectValue placeholder="DD" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 31 }, (_, i) => {
-                        const value = String(i + 1).padStart(2, "0");
-                        return (
-                          <SelectItem key={value} value={value}>
-                            {value}
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-
-                  <Select
-                    value={month}
-                    onValueChange={setMonth}
-                    disabled={loading}
-                  >
-                    <SelectTrigger
-                      className={`bg-black/50 border-2 border-teal-500 ${month ? "text-white" : "text-gray-400"}`}
-                    >
-                      <SelectValue placeholder="MM" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 12 }, (_, i) => {
-                        const value = String(i + 1).padStart(2, "0");
-                        return (
-                          <SelectItem key={value} value={value}>
-                            {value}
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-
-                  <Input
-                    value={year}
-                    onChange={(e) => setYear(e.target.value)}
-                    placeholder="YYYY"
-                    required
-                    maxLength={4}
-                    pattern="[0-9]{4}"
-                    disabled={loading}
-                    className={`bg-black/50 border-2 border-teal-500 focus:border-yellow-200 ${year ? "text-white" : "text-gray-400"}`}
-                  />
-                </div>
-              </Field>
-
               <Field
                 orientation="horizontal"
                 className="gap-4 animate-fade-in-delay-400 pt-4"
