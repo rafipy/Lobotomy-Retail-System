@@ -3,7 +3,7 @@ import { AuthRedirect } from "@/app/components/auth/auth-redirect";
 
 export default function AdminDashboardPage() {
   return (
-    <AuthRedirect requiredRole="admin">
+    <AuthRedirect requiredRole="ADMIN">
       <AdminDashboard />
     </AuthRedirect>
   );

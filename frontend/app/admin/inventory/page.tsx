@@ -3,11 +3,8 @@ import { AuthRedirect } from "@/app/components/auth/auth-redirect";
 
 export default function InventoryPage() {
   return (
-    <AuthRedirect requiredRole="admin">
+    <AuthRedirect requiredRole="ADMIN">
       <InventorySection />
     </AuthRedirect>
-
-  )
-
-
+  );
 }
