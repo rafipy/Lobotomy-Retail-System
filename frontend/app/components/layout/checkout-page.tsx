@@ -310,93 +310,60 @@ export function CheckoutPage() {
     setIsProcessing(true);
 
     try {
-      // Step 1: Create customer order
-      const orderResponse = await fetch("http://localhost:8000/customer-orders/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          customer_id: customerId,
-          employee_id: null,
-          items: items.map((item) => ({
-            product_id: item.product.id,
-            quantity: item.quantity,
-          })),
-          notes: orderNotes || null,
-        }),
-      });
-
-      if (!orderResponse.ok) {
-        const errorData = await orderResponse.json();
-        throw new Error(errorData.detail || "Failed to create order");
+      // Get user_id and customer data
+      const userId = localStorage.getItem("user_id");
+      if (!userId) {
+        throw new Error("User not logged in");
       }
 
-      const order = await orderResponse.json();
-      console.log("Order created:", order);
+      // Get customer_id from user_id
+      const { getCustomerByUserId } = await import("@/lib/api/customers");
+      const customer = await getCustomerByUserId(parseInt(userId));
 
-      // Step 2: Create payment record
-      // Map frontend payment method to backend enum values
-      let backendPaymentMethod = selectedPaymentMethod;
+      // Create the order
+      const { createCustomerOrder } = await import("@/lib/api/customer-orders");
+      const orderData = {
+        customer_id: customer.id,
+        items: items.map((item) => ({
+          product_id: item.product.id,
+          quantity: item.quantity,
+        })),
+        notes: orderNotes || undefined,
+      };
+
+      const createdOrder = await createCustomerOrder(orderData);
+
+      // Create the payment
+      const { createPayment } = await import("@/lib/api/payments");
+      const paymentData = {
+        customer_order_id: createdOrder.id,
+        amount: total,
+        payment_method: selectedPaymentMethod,
+        transaction_reference:
+          selectedPaymentMethod === "bank_transfer"
+            ? `BANK-${bankName}-${accountNumber.slice(-4)}`
+            : selectedPaymentMethod === "e_wallet"
+              ? `${walletType.toUpperCase()}-${walletId}`
+              : undefined,
+      };
+
+      const createdPayment = await createPayment(paymentData);
+
+      // Auto-complete payment for cash method
       if (selectedPaymentMethod === "cash") {
-        backendPaymentMethod = "cash";
+        const { completePayment } = await import("@/lib/api/payments");
+        await completePayment(createdPayment.id);
       }
 
-      const transactionRef = `TXN-${Date.now()}-${Math.random().toString(36).substring(7).toUpperCase()}`;
-
-      const paymentResponse = await fetch("http://localhost:8000/payments/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          customer_order_id: order.id,
-          amount: total,
-          payment_method: backendPaymentMethod,
-          transaction_reference: transactionRef,
-        }),
-      });
-
-      if (!paymentResponse.ok) {
-        const errorData = await paymentResponse.json();
-        throw new Error(errorData.detail || "Failed to create payment");
-      }
-
-      const payment = await paymentResponse.json();
-      console.log("Payment created:", payment);
-
-      // Step 3: Complete the payment (mark as completed)
-      const completeResponse = await fetch(
-        `http://localhost:8000/payments/${payment.id}/complete`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      
-      let completedPaymentId = null;
-
-      if (completeResponse.ok) {
-        const completeData = await completeResponse.json();
-        completedPaymentId = completeData.payment_id;
-        console.log("Payment marked as completed");
-      } else {
-        const errBody = await completeResponse.json().catch(() => null);
-        throw new Error(errBody?.detail || "Failed to complete payment");
-      }
-
-      // Success! Set order details
-      setOrderId(order.id.toString());
-      setTransactionId(completedPaymentId);
+      setOrderId(`ORD-${createdOrder.id}`);
+      setTransactionId(`TXN-${createdPayment.id}`);
       setOrderComplete(true);
       
 
       // Clear checkout items
       clearCheckoutItems();
 
-      // Remove items from cart if checkout was from cart
+      // Remove only the checked out items from cart (not the entire cart)
       if (isFromCart) {
         const selectedIdsJson = localStorage.getItem("checkout_selected_ids");
         if (selectedIdsJson) {
@@ -412,12 +379,13 @@ export function CheckoutPage() {
       alert(
         error instanceof Error
           ? error.message
-          : "Failed to place order. Please try again."
+          : "Failed to place order. Please try again.",
       );
     } finally {
       setIsProcessing(false);
     }
   };
+
   // Order Success Screen
   if (orderComplete) {
     return (
@@ -472,7 +440,9 @@ export function CheckoutPage() {
             <div className="text-sm space-y-2">
               <div className="flex justify-between">
                 <span className="text-gray-400">Name:</span>
-                <span className="text-white font-semibold">{shippingAddress.fullName}</span>
+                <span className="text-white font-semibold">
+                  {shippingAddress.fullName}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">Address:</span>
@@ -504,7 +474,6 @@ export function CheckoutPage() {
               </div>
             </div>
           </div>
-
 
           <div className="bg-teal-900/30 border border-teal-600/50 rounded-lg p-4 mb-6">
             <p className="text-teal-200 text-sm">

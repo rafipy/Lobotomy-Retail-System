@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import List, Optional
 
 from app.schemas.payment import (
@@ -169,39 +168,21 @@ def get_payment_summary(db: dict, order_id: int) -> Optional[PaymentSummary]:
 def create_payment(db: dict, payment_data: PaymentCreate) -> Optional[PaymentResponse]:
     cursor = db["cursor"]
 
+    # Just verify the order exists, don't check status or balance
     cursor.execute(
-        "SELECT id, status, total_amount FROM customer_orders WHERE id = %s",
+        "SELECT id FROM customer_orders WHERE id = %s",
         (payment_data.customer_order_id,),
     )
     order = cursor.fetchone()
     if not order:
         return None
 
-    if order["status"] == "cancelled":
-        return None
-
-    cursor.execute(
-        """
-        SELECT COALESCE(SUM(amount), 0) as total_paid
-        FROM payments
-        WHERE customer_order_id = %s AND payment_status = 'completed'
-        """,
-        (payment_data.customer_order_id,),
-    )
-    paid_result = cursor.fetchone()
-    total_paid = float(paid_result["total_paid"]) if paid_result else 0
-    order_total = float(order["total_amount"])
-    remaining = order_total - total_paid
-
-    if payment_data.amount > remaining:
-        return None
-
-    now = datetime.utcnow()
+    # Simply create the payment without any validation
     cursor.execute(
         """
         INSERT INTO payments
         (customer_order_id, amount, payment_method, payment_status, transaction_reference, payment_date, created_at)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         """,
         (
             payment_data.customer_order_id,
@@ -209,8 +190,6 @@ def create_payment(db: dict, payment_data: PaymentCreate) -> Optional[PaymentRes
             payment_data.payment_method.value,
             "pending",
             payment_data.transaction_reference,
-            now,
-            now,
         ),
     )
     payment_id = cursor.lastrowid
@@ -235,22 +214,11 @@ def complete_payment(db: dict, payment_id: int) -> Optional[dict]:
     cursor.execute(
         """
         UPDATE payments
-        SET payment_status = 'completed', payment_date = %s, updated_at = %s
+        SET payment_status = 'completed', payment_date = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
         WHERE id = %s
         """,
-        (datetime.utcnow(), datetime.utcnow(), payment_id),
+        (payment_id,),
     )
-
-    summary = get_payment_summary(db, payment["customer_order_id"])
-    if summary and summary.is_fully_paid:
-        cursor.execute(
-            """
-            UPDATE customer_orders
-            SET status = 'processing', updated_at = %s
-            WHERE id = %s AND status = 'pending'
-            """,
-            (datetime.utcnow(), payment["customer_order_id"]),
-        )
 
     return {"message": "Payment completed successfully", "payment_id": payment_id}
 
@@ -273,10 +241,10 @@ def fail_payment(
     cursor.execute(
         """
         UPDATE payments
-        SET payment_status = 'failed', updated_at = %s
+        SET payment_status = 'failed', updated_at = CURRENT_TIMESTAMP
         WHERE id = %s
         """,
-        (datetime.utcnow(), payment_id),
+        (payment_id,),
     )
 
     return {
@@ -303,10 +271,10 @@ def refund_payment(db: dict, payment_id: int) -> Optional[dict]:
     cursor.execute(
         """
         UPDATE payments
-        SET payment_status = 'refunded', updated_at = %s
+        SET payment_status = 'refunded', updated_at = CURRENT_TIMESTAMP
         WHERE id = %s
         """,
-        (datetime.utcnow(), payment_id),
+        (payment_id,),
     )
 
     return {

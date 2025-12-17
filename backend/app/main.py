@@ -8,12 +8,13 @@ from app.database import init_db
 from app.routers import (
     auth,
     customer_orders,
+    customers,
+    employees,
     payments,
     products,
     supplier,
     supplier_orders,
-    users,
-    customers
+    users
 )
 
 load_dotenv()
@@ -59,8 +60,8 @@ app.include_router(supplier.router)
 app.include_router(supplier_orders.router)
 app.include_router(customer_orders.router)
 app.include_router(payments.router)
-app.include_router(users.router)
 app.include_router(customers.router)
+app.include_router(employees.router)
 
 
 @app.get("/")

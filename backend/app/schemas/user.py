@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel
@@ -42,7 +42,6 @@ class CustomerRegister(BaseModel):
     address: Optional[str] = None
     city: Optional[str] = None
     postal_code: Optional[str] = None
-    birth_date: Optional[date] = None
 
 
 class CustomerRegisterResponse(BaseModel):

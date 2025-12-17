@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import List, Optional
 
 from app.schemas.customer_order import (
@@ -248,7 +247,7 @@ def create_customer_order(
     cursor.execute(
         """
         INSERT INTO customer_orders (customer_id, employee_id, status, total_amount, notes, created_at)
-        VALUES (%s, %s, %s, %s, %s, %s)
+        VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
         """,
         (
             order_data.customer_id,
@@ -256,7 +255,6 @@ def create_customer_order(
             "pending",
             total_amount,
             order_data.notes,
-            datetime.utcnow(),
         ),
     )
     order_id = cursor.lastrowid
@@ -297,23 +295,25 @@ def update_order_status(db: dict, order_id: int, new_status: str) -> Optional[di
     if new_status not in valid_transitions.get(current_status, []):
         return None
 
-    update_data = {"status": new_status, "updated_at": datetime.utcnow()}
+    update_data = {"status": new_status}
     if new_status == "completed":
-        update_data["completed_at"] = datetime.utcnow()
-
-    cursor.execute(
-        """
-        UPDATE customer_orders
-        SET status = %s, updated_at = %s, completed_at = %s
-        WHERE id = %s
-        """,
-        (
-            new_status,
-            update_data["updated_at"],
-            update_data.get("completed_at"),
-            order_id,
-        ),
-    )
+        cursor.execute(
+            """
+            UPDATE customer_orders
+            SET status = %s, updated_at = CURRENT_TIMESTAMP, completed_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+            """,
+            (new_status, order_id),
+        )
+    else:
+        cursor.execute(
+            """
+            UPDATE customer_orders
+            SET status = %s, updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+            """,
+            (new_status, order_id),
+        )
 
     return {"message": f"Order status updated to {new_status}"}
 
@@ -347,10 +347,10 @@ def cancel_customer_order(db: dict, order_id: int) -> Optional[dict]:
     cursor.execute(
         """
         UPDATE customer_orders
-        SET status = 'cancelled', updated_at = %s
+        SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP
         WHERE id = %s
         """,
-        (datetime.utcnow(), order_id),
+        (order_id,),
     )
 
     return {"message": "Order cancelled successfully", "items_restored": len(items)}
@@ -372,10 +372,10 @@ def assign_employee(db: dict, order_id: int, employee_id: int) -> Optional[dict]
     cursor.execute(
         """
         UPDATE customer_orders
-        SET employee_id = %s, updated_at = %s
+        SET employee_id = %s, updated_at = CURRENT_TIMESTAMP
         WHERE id = %s
         """,
-        (employee_id, datetime.utcnow(), order_id),
+        (employee_id, order_id),
     )
 
     return {
