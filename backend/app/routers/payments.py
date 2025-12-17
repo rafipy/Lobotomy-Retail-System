@@ -94,7 +94,7 @@ def complete_payment(payment_id: int, db=Depends(get_db)):
 
 
 @router.put("/{payment_id}/fail")
-def fail_payment(payment_id: int, reason: str = None, db=Depends(get_db)):
+def fail_payment(payment_id: int, reason: str, db=Depends(get_db)):
     result = payment_service.fail_payment(db, payment_id, reason)
     if not result:
         raise HTTPException(

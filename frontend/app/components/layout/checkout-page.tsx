@@ -88,6 +88,18 @@ interface ValidationErrors {
   accountNumber?: string;
 }
 
+// Helper function to get customer ID from localStorage
+function getCustomerId(): number | null {
+  if (typeof window === "undefined") return null;
+  const userId = localStorage.getItem("user_id");
+  return userId ? parseInt(userId) : null;
+}
+
+// Helper function to get auth token
+function getAuthToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("token");
+}
 // ============================================
 // MAIN CHECKOUT PAGE COMPONENT
 // ============================================
@@ -288,6 +300,13 @@ export function CheckoutPage() {
       return;
     }
 
+    const customerId = getCustomerId();
+    if (!customerId) {
+      alert("Please log in to place an order");
+      router.push("/login");
+      return;
+    }
+
     setIsProcessing(true);
 
     try {
@@ -339,7 +358,9 @@ export function CheckoutPage() {
       setOrderId(`ORD-${createdOrder.id}`);
       setTransactionId(`TXN-${createdPayment.id}`);
       setOrderComplete(true);
+      
 
+      // Clear checkout items
       clearCheckoutItems();
 
       // Remove only the checked out items from cart (not the entire cart)

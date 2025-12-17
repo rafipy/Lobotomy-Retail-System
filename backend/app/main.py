@@ -14,6 +14,7 @@ from app.routers import (
     products,
     supplier,
     supplier_orders,
+    users
 )
 
 load_dotenv()
