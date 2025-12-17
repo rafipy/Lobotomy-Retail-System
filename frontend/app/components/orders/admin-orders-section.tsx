@@ -19,9 +19,11 @@ import {
   processOrder,
   completeOrder,
   cancelOrder,
+  assignEmployee,
   CustomerOrder,
   CustomerOrderStatus,
 } from "@/lib/api/customer-orders";
+import { getEmployeeByUserId, Employee } from "@/lib/api/employees";
 
 const STATUS_CONFIG: Record<
   CustomerOrderStatus,
@@ -57,8 +59,37 @@ export function AdminOrdersSection() {
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [employee, setEmployee] = useState<Employee | null>(null);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [expandedOrders, setExpandedOrders] = useState<Set<number>>(new Set());
+
+  // Fetch employee for current user
+  useEffect(() => {
+    // Only run in browser
+    try {
+      const rawUserId =
+        typeof window !== "undefined" ? localStorage.getItem("user_id") : null;
+      if (!rawUserId) {
+        console.warn("No user_id in localStorage; cannot load employee");
+        return;
+      }
+      const parsed = parseInt(rawUserId, 10);
+      if (Number.isNaN(parsed)) {
+        console.warn("Invalid user_id in localStorage:", rawUserId);
+        return;
+      }
+
+      getEmployeeByUserId(parsed)
+        .then((emp) => {
+          setEmployee(emp);
+        })
+        .catch((err) => {
+          console.error("Failed to fetch employee for current user:", err);
+        });
+    } catch (err) {
+      console.error("Error while trying to load employee:", err);
+    }
+  }, []);
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -90,10 +121,22 @@ export function AdminOrdersSection() {
     });
   }
 
+  // Assign employee then process order
   async function handleProcessOrder(orderId: number) {
+    if (!employee) {
+      alert("Employee not loaded. Cannot process order.");
+      return;
+    }
+
     try {
       setActionLoading(orderId);
+
+      // Assign employee to order first
+      await assignEmployee(orderId, employee.id);
+
+      // Then mark order as processing
       await processOrder(orderId);
+
       await fetchOrders();
     } catch (err) {
       console.error("Failed to process order:", err);
@@ -255,8 +298,11 @@ export function AdminOrdersSection() {
                       <Button
                         size="sm"
                         onClick={() => handleProcessOrder(order.id)}
-                        disabled={isProcessingAction}
+                        disabled={isProcessingAction || !employee}
                         className="bg-blue-600 hover:bg-blue-700 text-white border border-blue-400"
+                        title={
+                          !employee ? "Employee not loaded" : "Process order"
+                        }
                       >
                         {isProcessingAction ? (
                           <Loader2 className="h-4 w-4 animate-spin" />

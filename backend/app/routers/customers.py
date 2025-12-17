@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -35,7 +35,6 @@ def get_customer_by_user_id(user_id: int, db=Depends(get_db)):
             "address": customer.get("address"),
             "city": customer.get("city"),
             "postal_code": customer.get("postal_code"),
-            "birth_date": customer.get("birth_date"),
             "user_id": customer["user_id"],
             "username": customer["username"],
             "created_at": customer.get("created_at"),
@@ -70,7 +69,6 @@ def get_customer(customer_id: int, db=Depends(get_db)):
             "address": customer.get("address"),
             "city": customer.get("city"),
             "postal_code": customer.get("postal_code"),
-            "birth_date": customer.get("birth_date"),
             "user_id": customer["user_id"],
             "username": customer["username"],
             "created_at": customer.get("created_at"),
@@ -103,7 +101,6 @@ def get_all_customers(db=Depends(get_db)):
                 "address": c.get("address"),
                 "city": c.get("city"),
                 "postal_code": c.get("postal_code"),
-                "birth_date": c.get("birth_date"),
                 "user_id": c["user_id"],
                 "username": c["username"],
                 "created_at": c.get("created_at"),

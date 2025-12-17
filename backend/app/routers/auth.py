@@ -87,7 +87,6 @@ def register_customer(register_data: CustomerRegister, db: dict = Depends(get_db
             register_data.address,
             register_data.city,
             register_data.postal_code,
-            register_data.birth_date,
             user_id,
         ),
     )

@@ -66,7 +66,6 @@ export function TransactionHistory() {
     try {
       setLoading(true);
 
-      // Debug: inspect localStorage value
       const rawUserId = localStorage.getItem("user_id");
       console.debug(
         "TransactionHistory: raw user_id from localStorage:",

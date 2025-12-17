@@ -8,6 +8,8 @@ from app.database import init_db
 from app.routers import (
     auth,
     customer_orders,
+    customers,
+    employees,
     payments,
     products,
     supplier,
@@ -57,6 +59,8 @@ app.include_router(supplier.router)
 app.include_router(supplier_orders.router)
 app.include_router(customer_orders.router)
 app.include_router(payments.router)
+app.include_router(customers.router)
+app.include_router(employees.router)
 
 
 @app.get("/")

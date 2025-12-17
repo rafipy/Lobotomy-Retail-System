@@ -123,7 +123,7 @@ export async function createCustomerOrder(
   return response.json();
 }
 
-// Mark order as processing
+// Mark order as processing and assign employee
 export async function processOrder(
   orderId: number,
 ): Promise<{ message: string }> {
