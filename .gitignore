@@ -9,3 +9,4 @@ backend/pyproject.toml
 backend/uv.lock
 backend/test_imports.py
 backend/test_api.py
+backend/create_employee.py

@@ -6,11 +6,10 @@ import { Button } from "@/components/ui/button";
 import { LogOut, Menu } from "lucide-react";
 
 interface HeaderProps {
-  username: string;
   onMenuClick: () => void;
 }
 
-export function AdminHeader({ username, onMenuClick }: HeaderProps) {
+export function AdminHeader({ onMenuClick }: HeaderProps) {
   const router = useRouter();
 
   const handleLogout = () => {
@@ -37,7 +36,9 @@ export function AdminHeader({ username, onMenuClick }: HeaderProps) {
               </h1>
               <p className="text-gray-400 font-body mt-1">
                 Welcome back,{" "}
-                <span className="text-teal-400 font-semibold">{username}</span>
+                <span className="text-teal-400 font-semibold">
+                  {localStorage.getItem("username")}
+                </span>
               </p>
             </div>
           </div>

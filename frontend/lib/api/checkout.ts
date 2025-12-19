@@ -16,9 +16,7 @@ export interface ShippingAddress {
   phone: string;
   address: string;
   city: string;
-  state: string;
   zipCode: string;
-  country: string;
 }
 
 export type PaymentMethod = "bank_transfer" | "e_wallet" | "cash";

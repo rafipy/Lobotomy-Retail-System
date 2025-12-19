@@ -1,7 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { User, Mail, Phone, MapPin, Search, Loader2, Eye, X } from "lucide-react";
+import {
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  Search,
+  Loader2,
+  Eye,
+  X,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -24,7 +33,9 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
+    null,
+  );
 
   useEffect(() => {
     fetchCustomers();
@@ -39,7 +50,9 @@ export default function CustomersPage() {
       setCustomers(data);
       setError(null);
     } catch (err) {
-      setError("Failed to load customers. Please check the backend connection.");
+      setError(
+        "Failed to load customers. Please check the backend connection.",
+      );
       console.error(err);
     } finally {
       setLoading(false);
@@ -112,24 +125,6 @@ export default function CustomersPage() {
           </div>
         )}
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-black/60 border-2 border-teal-500/50 rounded-lg p-4">
-            <p className="text-gray-400 text-sm">Total Customers</p>
-            <p className="text-2xl font-bold text-teal-200">{customers.length}</p>
-          </div>
-          <div className="bg-black/60 border-2 border-teal-500/50 rounded-lg p-4">
-            <p className="text-gray-400 text-sm">Search Results</p>
-            <p className="text-2xl font-bold text-teal-200">{filteredCustomers.length}</p>
-          </div>
-          <div className="bg-black/60 border-2 border-teal-500/50 rounded-lg p-4">
-            <p className="text-gray-400 text-sm">With Email</p>
-            <p className="text-2xl font-bold text-teal-200">
-              {customers.filter((c) => c.email).length}
-            </p>
-          </div>
-        </div>
-
         {/* Customer Cards */}
         <div className="space-y-3 max-h-[600px] overflow-y-auto">
           {filteredCustomers.length === 0 ? (
@@ -147,12 +142,14 @@ export default function CustomersPage() {
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center gap-3">
-                      <span className="text-xs text-gray-500 font-mono">#{customer.id}</span>
+                      <span className="text-xs text-gray-500 font-mono">
+                        #{customer.id}
+                      </span>
                       <h3 className="text-lg font-semibold text-white">
                         {customer.first_name} {customer.last_name}
                       </h3>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
                       {customer.username && (
                         <div className="flex items-center gap-2 text-gray-300">
@@ -179,12 +176,12 @@ export default function CustomersPage() {
                         </div>
                       )}
                     </div>
-                    
+
                     <div className="text-xs text-gray-500">
                       Joined: {formatDate(customer.created_at)}
                     </div>
                   </div>
-                  
+
                   <Button
                     size="sm"
                     onClick={() => setSelectedCustomer(customer)}
@@ -205,7 +202,9 @@ export default function CustomersPage() {
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-black/95 border-2 border-teal-500 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-black/95 border-b border-teal-500/50 p-6 flex items-center justify-between">
-              <h2 className="text-2xl font-heading text-teal-200">Customer Details</h2>
+              <h2 className="text-2xl font-heading text-teal-200">
+                Customer Details
+              </h2>
               <Button
                 variant="ghost"
                 size="icon"
@@ -226,11 +225,15 @@ export default function CustomersPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-gray-400 text-sm">Customer ID</p>
-                    <p className="text-white font-mono">#{selectedCustomer.id}</p>
+                    <p className="text-white font-mono">
+                      #{selectedCustomer.id}
+                    </p>
                   </div>
                   <div>
                     <p className="text-gray-400 text-sm">Username</p>
-                    <p className="text-white">{selectedCustomer.username || "N/A"}</p>
+                    <p className="text-white">
+                      {selectedCustomer.username || "N/A"}
+                    </p>
                   </div>
                   <div>
                     <p className="text-gray-400 text-sm">First Name</p>
@@ -242,11 +245,15 @@ export default function CustomersPage() {
                   </div>
                   <div>
                     <p className="text-gray-400 text-sm">Birth Date</p>
-                    <p className="text-white">{formatDate(selectedCustomer.birth_date)}</p>
+                    <p className="text-white">
+                      {formatDate(selectedCustomer.birth_date)}
+                    </p>
                   </div>
                   <div>
                     <p className="text-gray-400 text-sm">Member Since</p>
-                    <p className="text-white">{formatDate(selectedCustomer.created_at)}</p>
+                    <p className="text-white">
+                      {formatDate(selectedCustomer.created_at)}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -262,7 +269,9 @@ export default function CustomersPage() {
                     <Mail className="h-5 w-5 text-gray-400 mt-0.5" />
                     <div>
                       <p className="text-gray-400 text-sm">Email</p>
-                      <p className="text-white">{selectedCustomer.email || "Not provided"}</p>
+                      <p className="text-white">
+                        {selectedCustomer.email || "Not provided"}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
@@ -286,16 +295,22 @@ export default function CustomersPage() {
                 <div className="space-y-2">
                   <div>
                     <p className="text-gray-400 text-sm">Street Address</p>
-                    <p className="text-white">{selectedCustomer.address || "Not provided"}</p>
+                    <p className="text-white">
+                      {selectedCustomer.address || "Not provided"}
+                    </p>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-gray-400 text-sm">City</p>
-                      <p className="text-white">{selectedCustomer.city || "N/A"}</p>
+                      <p className="text-white">
+                        {selectedCustomer.city || "N/A"}
+                      </p>
                     </div>
                     <div>
                       <p className="text-gray-400 text-sm">Postal Code</p>
-                      <p className="text-white">{selectedCustomer.postal_code || "N/A"}</p>
+                      <p className="text-white">
+                        {selectedCustomer.postal_code || "N/A"}
+                      </p>
                     </div>
                   </div>
                 </div>

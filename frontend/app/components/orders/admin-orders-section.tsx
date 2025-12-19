@@ -34,7 +34,7 @@ const STATUS_CONFIG: Record<
   }
 > = {
   pending: {
-    label: "Pending Payment",
+    label: "Pending",
     icon: <Clock className="h-4 w-4" />,
     className: "bg-yellow-900/30 text-yellow-400 border-yellow-600",
   },

@@ -52,3 +52,32 @@ export async function getAllCustomers(): Promise<Customer[]> {
 
   return response.json();
 }
+
+export interface CustomerUpdate {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone_number?: string;
+  address?: string;
+  city?: string;
+  postal_code?: string;
+}
+
+export async function updateCustomer(
+  customerId: number,
+  updateData: CustomerUpdate,
+): Promise<Customer> {
+  const response = await fetch(`${API_URL}/customers/${customerId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(updateData),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to update customer");
+  }
+
+  return response.json();
+}

@@ -33,6 +33,9 @@ import { getActiveSuppliers, SupplierBrief } from "@/lib/api/supplier";
 interface EditProductDialogProps {
   product: Product;
   onProductUpdated: () => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  showTrigger?: boolean;
 }
 
 const CATEGORIES = [
@@ -52,8 +55,15 @@ const CATEGORIES = [
 export function EditProductDialog({
   product,
   onProductUpdated,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
+  showTrigger = true,
 }: EditProductDialogProps) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+
+  // Use controlled state if provided, otherwise use internal state
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = controlledOnOpenChange || setInternalOpen;
   const [loading, setLoading] = useState(false);
   const [suppliers, setSuppliers] = useState<SupplierBrief[]>([]);
   const [loadingSuppliers, setLoadingSuppliers] = useState(false);
@@ -151,15 +161,17 @@ export function EditProductDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 w-8 p-0 text-teal-400 hover:text-teal-300 hover:bg-teal-900/30"
-        >
-          <Pencil className="h-4 w-4" />
-        </Button>
-      </DialogTrigger>
+      {showTrigger && (
+        <DialogTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 text-teal-400 hover:text-teal-300 hover:bg-teal-900/30"
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="bg-gray-900 border-2 border-red-500 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-heading text-teal-400">

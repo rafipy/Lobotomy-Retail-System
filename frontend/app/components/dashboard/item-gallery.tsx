@@ -5,30 +5,44 @@ import Image from "next/image";
 import { getProducts, Product } from "@/lib/api/products";
 import { Loader2 } from "lucide-react";
 import { getStockStatus } from "@/lib/stock-status";
+import { EditProductDialog } from "@/app/components/inventory/edit-product-dialog";
 
 export function ItemGallery() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+
+  async function fetchProducts() {
+    try {
+      setLoading(true);
+      const data = await getProducts();
+      setProducts(data);
+      setError(null);
+    } catch (err) {
+      setError("Failed to load products. Is the backend running?");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    async function fetchProducts() {
-      try {
-        setLoading(true);
-        const data = await getProducts();
-        setProducts(data);
-        setError(null);
-      } catch (err) {
-        setError("Failed to load products. Is the backend running?");
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
     fetchProducts();
   }, []);
+
+  const handleProductClick = (product: Product) => {
+    setSelectedProduct(product);
+    setEditDialogOpen(true);
+  };
+
+  const handleProductUpdated = () => {
+    fetchProducts();
+    setEditDialogOpen(false);
+    setSelectedProduct(null);
+  };
 
   // Extract unique categories
   const categories = ["All", ...new Set(products.map((item) => item.category))];
@@ -82,7 +96,8 @@ export function ItemGallery() {
           return (
             <div
               key={item.id}
-              className="bg-black/60 border-2 border-red-500 rounded-xl overflow-hidden backdrop-blur-sm hover:border-teal-400 transition-all duration-300 hover:shadow-lg hover:shadow-red-500/50 flex flex-col"
+              onClick={() => handleProductClick(item)}
+              className="bg-black/60 border-2 border-red-500 rounded-xl overflow-hidden backdrop-blur-sm hover:border-teal-400 transition-all duration-300 hover:shadow-lg hover:shadow-red-500/50 flex flex-col cursor-pointer"
             >
               {/* Image Container */}
               <div className="relative h-48 bg-gray-900 border-b-2 border-red-500">
@@ -153,6 +168,20 @@ export function ItemGallery() {
         <div className="text-center py-16 text-gray-400">
           <p className="text-xl font-body">No items found in this category.</p>
         </div>
+      )}
+
+      {/* Edit Product Dialog */}
+      {selectedProduct && (
+        <EditProductDialog
+          product={selectedProduct}
+          onProductUpdated={handleProductUpdated}
+          open={editDialogOpen}
+          onOpenChange={(open) => {
+            setEditDialogOpen(open);
+            if (!open) setSelectedProduct(null);
+          }}
+          showTrigger={false}
+        />
       )}
     </div>
   );

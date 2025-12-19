@@ -16,11 +16,11 @@ import {
   Package,
   AlertTriangle,
   AlertCircle,
+  MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import {
   CheckoutItem,
@@ -70,22 +70,23 @@ interface ValidationErrors {
   shippingPhone?: string;
   shippingAddress?: string;
   shippingCity?: string;
-  shippingState?: string;
   shippingZipCode?: string;
-  shippingCountry?: string;
-  // Billing
-  billingFullName?: string;
-  billingEmail?: string;
-  billingPhone?: string;
-  billingAddress?: string;
-  billingCity?: string;
-  billingState?: string;
-  billingZipCode?: string;
-  billingCountry?: string;
   // Payment
   walletId?: string;
   bankName?: string;
   accountNumber?: string;
+}
+
+// Customer data interface
+interface CustomerData {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string | null;
+  phone_number: string | null;
+  address: string | null;
+  city: string | null;
+  postal_code: string | null;
 }
 
 // Helper function to get customer ID from localStorage
@@ -118,23 +119,11 @@ export function CheckoutPage() {
     phone: "",
     address: "",
     city: "",
-    state: "",
     zipCode: "",
-    country: "",
   });
 
-  const [billingAddress, setBillingAddress] = useState<ShippingAddress>({
-    fullName: "",
-    email: "",
-    phone: "",
-    address: "",
-    city: "",
-    state: "",
-    zipCode: "",
-    country: "",
-  });
-
-  const [sameAsShipping, setSameAsShipping] = useState(true);
+  // Customer data for "Use my saved address" feature
+  const [customerData, setCustomerData] = useState<CustomerData | null>(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] =
     useState<PaymentMethod>("bank_transfer");
   const [orderNotes, setOrderNotes] = useState("");
@@ -157,7 +146,7 @@ export function CheckoutPage() {
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [showErrors, setShowErrors] = useState(false);
 
-  // Load checkout items
+  // Load checkout items and customer data
   useEffect(() => {
     const checkoutItems = getCheckoutItems();
     if (checkoutItems.length === 0) {
@@ -168,7 +157,47 @@ export function CheckoutPage() {
 
     const fromCartFlag = localStorage.getItem("checkout_from_cart");
     setIsFromCart(fromCartFlag === "true");
+
+    // Load customer data for "Use my saved address" feature
+    const loadCustomerData = async () => {
+      const userId = localStorage.getItem("user_id");
+      if (userId) {
+        try {
+          const { getCustomerByUserId } = await import("@/lib/api/customers");
+          const customer = await getCustomerByUserId(parseInt(userId));
+          setCustomerData(customer);
+        } catch (error) {
+          console.error("Failed to load customer data:", error);
+        }
+      }
+    };
+    loadCustomerData();
   }, [router]);
+
+  // Fill shipping address with saved customer address
+  const useSavedAddress = () => {
+    if (customerData) {
+      setShippingAddress({
+        fullName: `${customerData.first_name} ${customerData.last_name}`,
+        email: customerData.email || "",
+        phone: customerData.phone_number || "",
+        address: customerData.address || "",
+        city: customerData.city || "",
+        zipCode: customerData.postal_code || "",
+      });
+      // Clear any shipping errors
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.shippingFullName;
+        delete newErrors.shippingEmail;
+        delete newErrors.shippingPhone;
+        delete newErrors.shippingAddress;
+        delete newErrors.shippingCity;
+        delete newErrors.shippingZipCode;
+        return newErrors;
+      });
+    }
+  };
 
   // Calculate totals
   const subtotal = items.reduce(
@@ -229,46 +258,8 @@ export function CheckoutPage() {
     if (!shippingAddress.city.trim()) {
       newErrors.shippingCity = "City is required";
     }
-    if (!shippingAddress.state.trim()) {
-      newErrors.shippingState = "State/Province is required";
-    }
     if (!shippingAddress.zipCode.trim()) {
       newErrors.shippingZipCode = "ZIP/Postal code is required";
-    }
-    if (!shippingAddress.country.trim()) {
-      newErrors.shippingCountry = "Country is required";
-    }
-
-    // Billing Address Validation (if not same as shipping)
-    if (!sameAsShipping) {
-      if (!billingAddress.fullName.trim()) {
-        newErrors.billingFullName = "Full name is required";
-      }
-      if (!billingAddress.email.trim()) {
-        newErrors.billingEmail = "Email is required";
-      } else if (!isValidEmail(billingAddress.email)) {
-        newErrors.billingEmail = "Please enter a valid email";
-      }
-      if (!billingAddress.phone.trim()) {
-        newErrors.billingPhone = "Phone number is required";
-      } else if (!isValidPhone(billingAddress.phone)) {
-        newErrors.billingPhone = "Please enter a valid phone number";
-      }
-      if (!billingAddress.address.trim()) {
-        newErrors.billingAddress = "Street address is required";
-      }
-      if (!billingAddress.city.trim()) {
-        newErrors.billingCity = "City is required";
-      }
-      if (!billingAddress.state.trim()) {
-        newErrors.billingState = "State/Province is required";
-      }
-      if (!billingAddress.zipCode.trim()) {
-        newErrors.billingZipCode = "ZIP/Postal code is required";
-      }
-      if (!billingAddress.country.trim()) {
-        newErrors.billingCountry = "Country is required";
-      }
     }
 
     // Payment Method Validation
@@ -317,8 +308,24 @@ export function CheckoutPage() {
       }
 
       // Get customer_id from user_id
-      const { getCustomerByUserId } = await import("@/lib/api/customers");
+      const { getCustomerByUserId, updateCustomer } =
+        await import("@/lib/api/customers");
       const customer = await getCustomerByUserId(parseInt(userId));
+
+      // Update customer address with shipping address from the form
+      const nameParts = shippingAddress.fullName.trim().split(" ");
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ") || "";
+
+      await updateCustomer(customer.id, {
+        first_name: firstName,
+        last_name: lastName,
+        email: shippingAddress.email,
+        phone_number: shippingAddress.phone,
+        address: shippingAddress.address,
+        city: shippingAddress.city,
+        postal_code: shippingAddress.zipCode,
+      });
 
       // Create the order
       const { createCustomerOrder } = await import("@/lib/api/customer-orders");
@@ -355,10 +362,9 @@ export function CheckoutPage() {
         await completePayment(createdPayment.id);
       }
 
-      setOrderId(`ORD-${createdOrder.id}`);
-      setTransactionId(`TXN-${createdPayment.id}`);
+      setOrderId(`${createdOrder.id}`);
+      setTransactionId(`${createdPayment.id}`);
       setOrderComplete(true);
-      
 
       // Clear checkout items
       clearCheckoutItems();
@@ -453,17 +459,10 @@ export function CheckoutPage() {
                 <span className="text-white">{shippingAddress.city}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">State:</span>
-                <span className="text-white">{shippingAddress.state}</span>
-              </div>
-              <div className="flex justify-between">
                 <span className="text-gray-400">Zip Code:</span>
                 <span className="text-white">{shippingAddress.zipCode}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Country:</span>
-                <span className="text-white">{shippingAddress.country}</span>
-              </div>
+
               <div className="flex justify-between">
                 <span className="text-gray-400">Email:</span>
                 <span className="text-white">{shippingAddress.email}</span>
@@ -564,10 +563,24 @@ export function CheckoutPage() {
         <div className="lg:col-span-2 space-y-6">
           {/* Shipping Address */}
           <div className="bg-black/60 border-2 border-teal-500 rounded-xl p-6 backdrop-blur-sm">
-            <h2 className="text-xl font-heading font-bold text-teal-200 mb-4 flex items-center gap-2">
-              <Truck className="h-5 w-5" />
-              Shipping Address
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-heading font-bold text-teal-200 flex items-center gap-2">
+                <Truck className="h-5 w-5" />
+                Shipping Address
+              </h2>
+              {customerData && customerData.address && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={useSavedAddress}
+                  className="text-teal-400/70 hover:text-teal-300 hover:bg-teal-900/20 border border-teal-600/30"
+                >
+                  <MapPin className="h-4 w-4 mr-2" />
+                  Use Saved Address
+                </Button>
+              )}
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -650,32 +663,6 @@ export function CheckoutPage() {
                 )}
               </div>
 
-              <div>
-                <Label className="text-gray-300">Country *</Label>
-                <Input
-                  value={shippingAddress.country}
-                  onChange={(e) => {
-                    setShippingAddress({
-                      ...shippingAddress,
-                      country: e.target.value,
-                    });
-                    clearError("shippingCountry");
-                  }}
-                  placeholder="United States"
-                  className={`bg-black/50 border-teal-600 text-white placeholder:text-gray-500 focus:border-teal-400 ${
-                    showErrors && errors.shippingCountry
-                      ? "border-red-500 focus:border-red-500"
-                      : ""
-                  }`}
-                />
-                {showErrors && errors.shippingCountry && (
-                  <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" />
-                    {errors.shippingCountry}
-                  </p>
-                )}
-              </div>
-
               <div className="md:col-span-2">
                 <Label className="text-gray-300">Street Address *</Label>
                 <Input
@@ -729,32 +716,6 @@ export function CheckoutPage() {
               </div>
 
               <div>
-                <Label className="text-gray-300">State/Province *</Label>
-                <Input
-                  value={shippingAddress.state}
-                  onChange={(e) => {
-                    setShippingAddress({
-                      ...shippingAddress,
-                      state: e.target.value,
-                    });
-                    clearError("shippingState");
-                  }}
-                  placeholder="NY"
-                  className={`bg-black/50 border-teal-600 text-white placeholder:text-gray-500 focus:border-teal-400 ${
-                    showErrors && errors.shippingState
-                      ? "border-red-500 focus:border-red-500"
-                      : ""
-                  }`}
-                />
-                {showErrors && errors.shippingState && (
-                  <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" />
-                    {errors.shippingState}
-                  </p>
-                )}
-              </div>
-
-              <div>
                 <Label className="text-gray-300">ZIP/Postal Code *</Label>
                 <Input
                   value={shippingAddress.zipCode}
@@ -780,245 +741,6 @@ export function CheckoutPage() {
                 )}
               </div>
             </div>
-          </div>
-
-          {/* Billing Address */}
-          <div className="bg-black/60 border-2 border-teal-500 rounded-xl p-6 backdrop-blur-sm">
-            <h2 className="text-xl font-heading font-bold text-teal-200 mb-4 flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Billing Address
-            </h2>
-
-            <div className="flex items-center gap-2 mb-4">
-              <Checkbox
-                id="sameAsShipping"
-                checked={sameAsShipping}
-                onCheckedChange={(checked) =>
-                  setSameAsShipping(checked as boolean)
-                }
-                className="border-teal-500 data-[state=checked]:bg-teal-600"
-              />
-              <Label
-                htmlFor="sameAsShipping"
-                className="text-gray-300 cursor-pointer"
-              >
-                Same as shipping address
-              </Label>
-            </div>
-
-            {!sameAsShipping && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-gray-300">Full Name *</Label>
-                  <Input
-                    value={billingAddress.fullName}
-                    onChange={(e) => {
-                      setBillingAddress({
-                        ...billingAddress,
-                        fullName: e.target.value,
-                      });
-                      clearError("billingFullName");
-                    }}
-                    placeholder="John Doe"
-                    className={`bg-black/50 border-teal-600 text-white placeholder:text-gray-500 focus:border-teal-400 ${
-                      showErrors && errors.billingFullName
-                        ? "border-red-500 focus:border-red-500"
-                        : ""
-                    }`}
-                  />
-                  {showErrors && errors.billingFullName && (
-                    <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" />
-                      {errors.billingFullName}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <Label className="text-gray-300">Email *</Label>
-                  <Input
-                    type="email"
-                    value={billingAddress.email}
-                    onChange={(e) => {
-                      setBillingAddress({
-                        ...billingAddress,
-                        email: e.target.value,
-                      });
-                      clearError("billingEmail");
-                    }}
-                    placeholder="john@example.com"
-                    className={`bg-black/50 border-teal-600 text-white placeholder:text-gray-500 focus:border-teal-400 ${
-                      showErrors && errors.billingEmail
-                        ? "border-red-500 focus:border-red-500"
-                        : ""
-                    }`}
-                  />
-                  {showErrors && errors.billingEmail && (
-                    <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" />
-                      {errors.billingEmail}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <Label className="text-gray-300">Phone *</Label>
-                  <Input
-                    type="tel"
-                    value={billingAddress.phone}
-                    onChange={(e) => {
-                      setBillingAddress({
-                        ...billingAddress,
-                        phone: e.target.value,
-                      });
-                      clearError("billingPhone");
-                    }}
-                    placeholder="+1 234 567 8900"
-                    className={`bg-black/50 border-teal-600 text-white placeholder:text-gray-500 focus:border-teal-400 ${
-                      showErrors && errors.billingPhone
-                        ? "border-red-500 focus:border-red-500"
-                        : ""
-                    }`}
-                  />
-                  {showErrors && errors.billingPhone && (
-                    <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" />
-                      {errors.billingPhone}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <Label className="text-gray-300">Country *</Label>
-                  <Input
-                    value={billingAddress.country}
-                    onChange={(e) => {
-                      setBillingAddress({
-                        ...billingAddress,
-                        country: e.target.value,
-                      });
-                      clearError("billingCountry");
-                    }}
-                    placeholder="United States"
-                    className={`bg-black/50 border-teal-600 text-white placeholder:text-gray-500 focus:border-teal-400 ${
-                      showErrors && errors.billingCountry
-                        ? "border-red-500 focus:border-red-500"
-                        : ""
-                    }`}
-                  />
-                  {showErrors && errors.billingCountry && (
-                    <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" />
-                      {errors.billingCountry}
-                    </p>
-                  )}
-                </div>
-
-                <div className="md:col-span-2">
-                  <Label className="text-gray-300">Street Address *</Label>
-                  <Input
-                    value={billingAddress.address}
-                    onChange={(e) => {
-                      setBillingAddress({
-                        ...billingAddress,
-                        address: e.target.value,
-                      });
-                      clearError("billingAddress");
-                    }}
-                    placeholder="123 Main Street, Apt 4B"
-                    className={`bg-black/50 border-teal-600 text-white placeholder:text-gray-500 focus:border-teal-400 ${
-                      showErrors && errors.billingAddress
-                        ? "border-red-500 focus:border-red-500"
-                        : ""
-                    }`}
-                  />
-                  {showErrors && errors.billingAddress && (
-                    <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" />
-                      {errors.billingAddress}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <Label className="text-gray-300">City *</Label>
-                  <Input
-                    value={billingAddress.city}
-                    onChange={(e) => {
-                      setBillingAddress({
-                        ...billingAddress,
-                        city: e.target.value,
-                      });
-                      clearError("billingCity");
-                    }}
-                    placeholder="New York"
-                    className={`bg-black/50 border-teal-600 text-white placeholder:text-gray-500 focus:border-teal-400 ${
-                      showErrors && errors.billingCity
-                        ? "border-red-500 focus:border-red-500"
-                        : ""
-                    }`}
-                  />
-                  {showErrors && errors.billingCity && (
-                    <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" />
-                      {errors.billingCity}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <Label className="text-gray-300">State/Province *</Label>
-                  <Input
-                    value={billingAddress.state}
-                    onChange={(e) => {
-                      setBillingAddress({
-                        ...billingAddress,
-                        state: e.target.value,
-                      });
-                      clearError("billingState");
-                    }}
-                    placeholder="NY"
-                    className={`bg-black/50 border-teal-600 text-white placeholder:text-gray-500 focus:border-teal-400 ${
-                      showErrors && errors.billingState
-                        ? "border-red-500 focus:border-red-500"
-                        : ""
-                    }`}
-                  />
-                  {showErrors && errors.billingState && (
-                    <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" />
-                      {errors.billingState}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <Label className="text-gray-300">ZIP/Postal Code *</Label>
-                  <Input
-                    value={billingAddress.zipCode}
-                    onChange={(e) => {
-                      setBillingAddress({
-                        ...billingAddress,
-                        zipCode: e.target.value,
-                      });
-                      clearError("billingZipCode");
-                    }}
-                    placeholder="10001"
-                    className={`bg-black/50 border-teal-600 text-white placeholder:text-gray-500 focus:border-teal-400 ${
-                      showErrors && errors.billingZipCode
-                        ? "border-red-500 focus:border-red-500"
-                        : ""
-                    }`}
-                  />
-                  {showErrors && errors.billingZipCode && (
-                    <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" />
-                      {errors.billingZipCode}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Payment Method */}
