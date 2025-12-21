@@ -61,7 +61,6 @@ npm run dev
 - **Frontend:** `http://localhost:3000`
 - **API Docs:** `http://localhost:8000/docs`
 
----
 
 ### ALTERNATIVE Step 1: Use Docker*
 
@@ -71,6 +70,8 @@ cd lobotomy-retail-system
 docker-compose up --build
 ```
 <sub>* Insure docker is downloaded and online.</sub>
+
+---
 
 ## 🔐 Environment Configuration
 
