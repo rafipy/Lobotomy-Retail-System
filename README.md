@@ -116,5 +116,5 @@ lobotomy-retail-system/
 ---
 
 <p align="center">
-  <sub>© L Corporation — "Bless the New Generation"</sub>
+  <sub>© L Corporation — "Face the items. Build the future."</sub>
 </p>
