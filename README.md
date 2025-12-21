@@ -63,13 +63,14 @@ npm run dev
 
 ---
 
-### ALTERNATIVE Step 1: Use Docker
+### ALTERNATIVE Step 1: Use Docker*
+
 ```bash
-// Insure Docker is online.
 git clone <repository-url>
 cd lobotomy-retail-system
 docker-compose up --build
 ```
+<sub>* Insure docker is downloaded and online.</sub>
 
 ## 🔐 Environment Configuration
 
