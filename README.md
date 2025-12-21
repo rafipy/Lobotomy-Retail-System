@@ -63,6 +63,14 @@ npm run dev
 
 ---
 
+### ALTERNATIVE Step 1: Use Docker
+```bash
+// Insure Docker is online.
+git clone <repository-url>
+cd lobotomy-retail-system
+docker-compose up --build
+```
+
 ## 🔐 Environment Configuration
 
 <img align="right" src="https://static.wikia.nocookie.net/lobotomycorp/images/b/b5/Worried.PNG" width="100"/>
