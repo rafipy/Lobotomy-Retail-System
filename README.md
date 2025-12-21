@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="[https://static.wikia.nocookie.net/lobotomycorp/images/e/e6/Site-logo.png](https://static.wikitide.net/projectmoonwiki/thumb/9/90/Lobotomy-Logo.webp/744px-Lobotomy-Logo.webp.png?20250327174408)" alt="Lobotomy Corporation" width="280"/>
+  <img src="https://static.wikitide.net/projectmoonwiki/thumb/9/90/Lobotomy-Logo.webp/744px-Lobotomy-Logo.webp.png?20250327174408" alt="Lobotomy Corporation" width="280"/>
 </p>
 
 <h1 align="center">LOBOTOMY RETAIL SYSTEM</h1>
